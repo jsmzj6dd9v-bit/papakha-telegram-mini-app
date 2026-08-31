@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#b60024" />
+    <meta
+      name="description"
+      content="Papakha Exchange — заявка на обмен в Telegram"
+    />
+
+    <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <title>Papakha Exchange</title>
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand" type="button" data-screen-link="home" aria-label="На главную">
+          <span class="brand-mark" aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+          <span class="brand-name">papakha<br />exchange</span>
+        </button>
+
+        <span class="status-chip">
+          <span class="status-dot" aria-hidden="true"></span>
+          mini app
+        </span>
+      </header>
+
+      <main>
+        <section class="screen is-active" data-screen="home" aria-labelledby="home-title">
+          <div class="hero">
+            <p class="eyebrow">КРИПТООБМЕН • БЕЗ ЛИШНЕГО</p>
+            <h1 id="home-title">Обмен.<br /><span>По делу.</span></h1>
+
+            <div class="coin-stage" aria-hidden="true">
+              <div class="coin coin-back"><span>₽</span></div>
+              <div class="coin coin-middle"><span>₮</span></div>
+              <div class="coin coin-front"><span>₿</span></div>
+              <span class="registered">®</span>
+            </div>
+
+            <p class="hero-copy">
+              Выберите направление и подготовьте заявку. Курс и детали подтверждаются перед сделкой.
+            </p>
+
+            <button class="primary-button" type="button" data-screen-link="exchange">
+              Начать обмен
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+
+          <div class="feature-strip" aria-label="Преимущества">
+            <div>
+              <span>01</span>
+              <strong>Понятный процесс</strong>
+            </div>
+            <div>
+              <span>02</span>
+              <strong>Условия до сделки</strong>
+            </div>
+            <div>
+              <span>03</span>
+              <strong>Поддержка в Telegram</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="exchange" aria-labelledby="exchange-title">
+          <div class="section-heading">
+            <p class="eyebrow">НОВАЯ ЗАЯВКА</p>
+            <h2 id="exchange-title">Что<br />обмениваем?</h2>
+          </div>
+
+          <form id="exchange-form" class="exchange-form">
+            <label class="field-card">
+              <span class="field-label">Отдаёте</span>
+              <span class="field-row">
+                <input
+                  id="give-amount"
+                  name="giveAmount"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="0"
+                  aria-describedby="amount-error"
+                />
+                <select id="give-currency" name="giveCurrency" aria-label="Валюта, которую отдаёте">
+                  <option value="USDT">USDT</option>
+                  <option value="BTC">BTC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="RUB">RUB</option>
+                  <option value="KZT">KZT</option>
+                  <option value="AED">AED</option>
+                  <option value="USD">USD</option>
+                </select>
+              </span>
+            </label>
+
+            <button id="swap-button" class="swap-button" type="button" aria-label="Поменять валюты местами">⇅</button>
+
+            <label class="field-card field-card-receive">
+              <span class="field-label">Получаете</span>
+              <span class="field-row">
+                <span class="calculated-value" id="receive-value">После согласования</span>
+                <select id="receive-currency" name="receiveCurrency" aria-label="Валюта, которую получаете">
+                  <option value="RUB">RUB</option>
+                  <option value="KZT">KZT</option>
+                  <option value="AED">AED</option>
+                  <option value="USD">USD</option>
+                  <option value="USDT">USDT</option>
+                  <option value="BTC">BTC</option>
+                  <option value="ETH">ETH</option>
+                </select>
+              </span>
+            </label>
+
+            <p id="amount-error" class="field-error" role="alert"></p>
+
+            <fieldset class="method-picker">
+              <legend>Способ расчёта</legend>
+              <label>
+                <input type="radio" name="method" value="Наличные" checked />
+                <span>Наличные</span>
+              </label>
+              <label>
+                <input type="radio" name="method" value="Перевод" />
+                <span>Перевод</span>
+              </label>
+            </fieldset>
+
+            <div class="notice">
+              <span class="notice-symbol">i</span>
+              <p><strong>Без выдуманных цифр.</strong> Финальный курс и сумма появятся только после подтверждения условий.</p>
+            </div>
+
+            <button class="primary-button" type="submit">
+              Подготовить заявку
+              <span aria-hidden="true">→</span>
+            </button>
+          </form>
+        </section>
+
+        <section class="screen" data-screen="info" aria-labelledby="info-title">
+          <div class="section-heading">
+            <p class="eyebrow">КАК ЭТО РАБОТАЕТ</p>
+            <h2 id="info-title">Три<br />шага.</h2>
+          </div>
+
+          <ol class="steps-list">
+            <li>
+              <span>01</span>
+              <div><strong>Выберите направление</strong><p>Укажите сумму и валюты обмена.</p></div>
+            </li>
+            <li>
+              <span>02</span>
+              <div><strong>Согласуйте условия</strong><p>Курс, способ и детали подтверждаются до сделки.</p></div>
+            </li>
+            <li>
+              <span>03</span>
+              <div><strong>Завершите обмен</strong><p>Действуйте только после получения подтверждения.</p></div>
+            </li>
+          </ol>
+
+          <div class="red-panel">
+            <p class="eyebrow">PAPAKHA EXCHANGE®</p>
+            <h3>Коротко.<br />Ясно.<br />По делу.</h3>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Основная навигация">
+        <button class="nav-button is-active" type="button" data-screen-link="home">
+          <span aria-hidden="true">⌂</span>
+          Главная
+        </button>
+        <button class="nav-button" type="button" data-screen-link="exchange">
+          <span aria-hidden="true">⇄</span>
+          Обмен
+        </button>
+        <button class="nav-button" type="button" data-screen-link="info">
+          <span aria-hidden="true">i</span>
+          Как это работает
+        </button>
+      </nav>
+    </div>
+
+    <div id="request-sheet" class="sheet" aria-hidden="true">
+      <button class="sheet-backdrop" type="button" data-close-sheet aria-label="Закрыть"></button>
+      <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <p class="eyebrow">ЧЕРНОВИК ГОТОВ</p>
+        <h2 id="sheet-title">Проверьте<br />заявку.</h2>
+
+        <dl class="request-summary">
+          <div><dt>Отдаёте</dt><dd id="summary-give"></dd></div>
+          <div><dt>Получаете</dt><dd id="summary-receive"></dd></div>
+          <div><dt>Способ</dt><dd id="summary-method"></dd></div>
+          <div><dt>Курс</dt><dd>Подтверждается</dd></div>
+        </dl>
+
+        <p class="sheet-note">
+          Сейчас это локальный черновик: данные никуда не отправляются. Для приёма заявок нужно подключить сервер бота.
+        </p>
+
+        <button id="copy-request" class="primary-button" type="button">
+          Скопировать заявку
+          <span aria-hidden="true">⧉</span>
+        </button>
+        <button class="secondary-button" type="button" data-close-sheet>Изменить</button>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
