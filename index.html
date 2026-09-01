@@ -74,76 +74,72 @@
 
         <section class="screen" data-screen="exchange" aria-labelledby="exchange-title">
           <div class="section-heading">
-            <p class="eyebrow">НОВАЯ ЗАЯВКА</p>
-            <h2 id="exchange-title">Что<br />обмениваем?</h2>
+            <p id="survey-counter" class="eyebrow">ШАГ 1 ИЗ 4</p>
+            <h2 id="exchange-title">Что<br />отдаёте?</h2>
           </div>
 
-          <form id="exchange-form" class="exchange-form">
-            <label class="field-card">
-              <span class="field-label">Отдаёте</span>
-              <span class="field-row">
-                <input
-                  id="give-amount"
-                  name="giveAmount"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  placeholder="0"
-                  aria-describedby="amount-error"
-                />
-                <select id="give-currency" name="giveCurrency" aria-label="Валюта, которую отдаёте">
-                  <option value="USDT">USDT</option>
-                  <option value="BTC">BTC</option>
-                  <option value="ETH">ETH</option>
-                  <option value="RUB">RUB</option>
-                  <option value="KZT">KZT</option>
-                  <option value="AED">AED</option>
-                  <option value="USD">USD</option>
-                </select>
-              </span>
-            </label>
+          <div class="survey-progress" aria-hidden="true"><span id="survey-progress-bar"></span></div>
 
-            <button id="swap-button" class="swap-button" type="button" aria-label="Поменять валюты местами">⇅</button>
+          <form id="exchange-form" class="exchange-form" novalidate>
+            <section class="survey-step is-active" data-survey-step="0">
+              <p class="survey-hint">Выберите валюту, которую хотите обменять.</p>
+              <fieldset class="choice-list" aria-label="Валюта, которую отдаёте">
+                <label><input type="radio" name="giveCurrency" value="USDT" /><span><b>USDT</b><small>Tether</small></span></label>
+                <label><input type="radio" name="giveCurrency" value="BTC" /><span><b>BTC</b><small>Bitcoin</small></span></label>
+                <label><input type="radio" name="giveCurrency" value="ETH" /><span><b>ETH</b><small>Ethereum</small></span></label>
+                <label><input type="radio" name="giveCurrency" value="RUB" /><span><b>RUB</b><small>Российский рубль</small></span></label>
+                <label><input type="radio" name="giveCurrency" value="KZT" /><span><b>KZT</b><small>Казахстанский тенге</small></span></label>
+                <label><input type="radio" name="giveCurrency" value="AED" /><span><b>AED</b><small>Дирхам ОАЭ</small></span></label>
+                <label><input type="radio" name="giveCurrency" value="USD" /><span><b>USD</b><small>Доллар США</small></span></label>
+              </fieldset>
+            </section>
 
-            <label class="field-card field-card-receive">
-              <span class="field-label">Получаете</span>
-              <span class="field-row">
-                <span class="calculated-value" id="receive-value">После согласования</span>
-                <select id="receive-currency" name="receiveCurrency" aria-label="Валюта, которую получаете">
-                  <option value="RUB">RUB</option>
-                  <option value="KZT">KZT</option>
-                  <option value="AED">AED</option>
-                  <option value="USD">USD</option>
-                  <option value="USDT">USDT</option>
-                  <option value="BTC">BTC</option>
-                  <option value="ETH">ETH</option>
-                </select>
-              </span>
-            </label>
-
-            <p id="amount-error" class="field-error" role="alert"></p>
-
-            <fieldset class="method-picker">
-              <legend>Способ расчёта</legend>
-              <label>
-                <input type="radio" name="method" value="Наличные" checked />
-                <span>Наличные</span>
+            <section class="survey-step" data-survey-step="1">
+              <p class="survey-hint">Укажите сумму, которую отдаёте.</p>
+              <label class="amount-card">
+                <span class="field-label">Сумма</span>
+                <span class="amount-row">
+                  <input id="give-amount" name="giveAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0" aria-describedby="amount-error" />
+                  <strong id="amount-currency">—</strong>
+                </span>
               </label>
-              <label>
-                <input type="radio" name="method" value="Перевод" />
-                <span>Перевод</span>
-              </label>
-            </fieldset>
+              <p id="amount-error" class="field-error" role="alert"></p>
+            </section>
 
-            <div class="notice">
-              <span class="notice-symbol">i</span>
-              <p><strong>Без выдуманных цифр.</strong> Финальный курс и сумма появятся только после подтверждения условий.</p>
+            <section class="survey-step" data-survey-step="2">
+              <p class="survey-hint">Выберите валюту, которую хотите получить.</p>
+              <fieldset class="choice-list" aria-label="Валюта, которую получаете">
+                <label><input type="radio" name="receiveCurrency" value="RUB" /><span><b>RUB</b><small>Российский рубль</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="KZT" /><span><b>KZT</b><small>Казахстанский тенге</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="AED" /><span><b>AED</b><small>Дирхам ОАЭ</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="USD" /><span><b>USD</b><small>Доллар США</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="USDT" /><span><b>USDT</b><small>Tether</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="BTC" /><span><b>BTC</b><small>Bitcoin</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="ETH" /><span><b>ETH</b><small>Ethereum</small></span></label>
+              </fieldset>
+            </section>
+
+            <section class="survey-step" data-survey-step="3">
+              <p class="survey-hint">Выберите удобный способ расчёта.</p>
+              <fieldset class="choice-list choice-list-method" aria-label="Способ расчёта">
+                <label><input type="radio" name="method" value="Наличные" /><span><b>Наличные</b><small>Детали согласует менеджер</small></span></label>
+                <label><input type="radio" name="method" value="Перевод" /><span><b>Перевод</b><small>Реквизиты после подтверждения</small></span></label>
+              </fieldset>
+              <div class="notice">
+                <span class="notice-symbol">i</span>
+                <p><strong>Без выдуманных цифр.</strong> Финальный курс и сумма появятся только после подтверждения условий.</p>
+              </div>
+            </section>
+
+            <p id="survey-error" class="field-error survey-error" role="alert"></p>
+
+            <div class="survey-actions">
+              <button id="survey-back" class="secondary-button" type="button">Назад</button>
+              <button id="survey-next" class="primary-button" type="button">
+                Продолжить
+                <span aria-hidden="true">→</span>
+              </button>
             </div>
-
-            <button class="primary-button" type="submit">
-              Подготовить заявку
-              <span aria-hidden="true">→</span>
-            </button>
           </form>
         </section>
 
