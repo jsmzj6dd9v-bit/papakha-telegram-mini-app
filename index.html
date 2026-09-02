@@ -59,7 +59,7 @@
           <section class="rates-panel" aria-labelledby="rates-title">
             <div class="rates-heading">
               <div>
-                <p class="eyebrow">КОТИРОВКИ RAPIRA</p>
+                <p class="eyebrow">КУРС · ОНЛАЙН</p>
                 <h2 id="rates-title">Курс<br /><span>сейчас.</span></h2>
               </div>
               <span id="rates-status" class="rates-status" data-state="loading">Загрузка</span>
@@ -229,8 +229,13 @@
       <button class="sheet-backdrop" type="button" data-close-sheet aria-label="Закрыть"></button>
       <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
         <div class="sheet-handle" aria-hidden="true"></div>
-        <p class="eyebrow">ЧЕРНОВИК ГОТОВ</p>
+        <p id="sheet-eyebrow" class="eyebrow">ОТПРАВКА ЗАЯВКИ</p>
         <h2 id="sheet-title">Проверьте<br />заявку.</h2>
+
+        <div id="deal-state" class="deal-state" hidden>
+          <span id="deal-public-id"></span>
+          <strong id="deal-status"></strong>
+        </div>
 
         <dl class="request-summary">
           <div><dt>Отдаёте</dt><dd id="summary-give"></dd></div>
@@ -241,12 +246,16 @@
 
         <p id="summary-rate-note" class="rate-note" hidden></p>
 
-        <p class="sheet-note">
-          Сейчас это локальный черновик: данные никуда не отправляются. Для приёма заявок нужно подключить сервер бота.
-        </p>
+        <p id="sheet-note" class="sheet-note">Заявка будет отправлена менеджеру. Финальный курс подтверждает менеджер.</p>
+
+        <div id="client-deal-actions" class="client-deal-actions" hidden>
+          <button class="primary-button" type="button" data-deal-action="accept-rate">Принять курс</button>
+          <button class="secondary-button" type="button" data-deal-action="reject-rate">Отказаться</button>
+          <button class="primary-button" type="button" data-deal-action="payment-sent">Я оплатил</button>
+        </div>
 
         <button id="copy-request" class="primary-button" type="button">
-          Скопировать заявку
+          Скопировать данные
           <span aria-hidden="true">⧉</span>
         </button>
         <button class="secondary-button" type="button" data-close-sheet>Изменить</button>

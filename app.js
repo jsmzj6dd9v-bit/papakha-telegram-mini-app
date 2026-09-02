@@ -3,7 +3,8 @@
 
   const telegram = window.Telegram?.WebApp;
   const rateCore = window.PapakhaRates;
-  const ratesApiUrl = window.PAPAKHA_CONFIG?.ratesApiUrl?.trim();
+  const apiBaseUrl = window.PAPAKHA_CONFIG?.apiBaseUrl?.replace(/\/$/, "") || "";
+  const ratesApiUrl = `${apiBaseUrl}/rates`;
   const screens = [...document.querySelectorAll("[data-screen]")];
   const navButtons = [...document.querySelectorAll(".nav-button")];
   const screenLinks = [...document.querySelectorAll("[data-screen-link]")];
@@ -21,6 +22,13 @@
   const sheet = document.getElementById("request-sheet");
   const toast = document.getElementById("toast");
   const copyButton = document.getElementById("copy-request");
+  const sheetEyebrow = document.getElementById("sheet-eyebrow");
+  const sheetTitle = document.getElementById("sheet-title");
+  const sheetNote = document.getElementById("sheet-note");
+  const dealState = document.getElementById("deal-state");
+  const dealPublicId = document.getElementById("deal-public-id");
+  const dealStatus = document.getElementById("deal-status");
+  const clientDealActions = document.getElementById("client-deal-actions");
   const ratesGrid = document.getElementById("rates-grid");
   const ratesStatus = document.getElementById("rates-status");
   const ratesMeta = document.getElementById("rates-meta");
@@ -29,6 +37,8 @@
   const quoteValue = document.getElementById("quote-value");
   const quoteRate = document.getElementById("quote-rate");
   let currentDraft = null;
+  let currentDeal = null;
+  let dealPollTimer = null;
   let currentRates = null;
   let currentQuote = null;
   let currentSurveyStep = 0;
@@ -64,8 +74,8 @@
   };
 
   const payloadIsStale = (payload) => {
-    const fetchedAt = new Date(payload?.fetchedAt).getTime();
-    return Boolean(payload?.stale || !Number.isFinite(fetchedAt) || Date.now() - fetchedAt > 120000);
+    const updatedAt = new Date(payload?.updatedAt).getTime();
+    return Boolean(payload?.stale || !Number.isFinite(updatedAt) || Date.now() - updatedAt > 120000);
   };
 
   const storeRates = (payload) => {
@@ -92,8 +102,8 @@
 
     if (!hasRates) {
       ratesStatus.dataset.state = "error";
-      ratesStatus.textContent = "Недоступно";
-      ratesMeta.textContent = "Не удалось получить котировки. Расчёт появится после восстановления связи.";
+      ratesStatus.textContent = "Курс временно недоступен";
+      ratesMeta.textContent = "Курс временно недоступен. Расчёт появится после восстановления связи.";
       ["rate-usdt-sell", "rate-usdt-buy", "rate-btc", "rate-eth"].forEach((id) => {
         document.getElementById(id).textContent = "—";
       });
@@ -108,7 +118,7 @@
     document.getElementById("rate-usdt-buy").textContent = `${rateCore.formatNumber(payload.rates["USDT/RUB"].buyRate, 2)} ₽`;
     document.getElementById("rate-btc").textContent = `${rateCore.formatNumber(payload.rates["BTC/USDT"].close, 2)} USDT`;
     document.getElementById("rate-eth").textContent = `${rateCore.formatNumber(payload.rates["ETH/USDT"].close, 2)} USDT`;
-    ratesMeta.textContent = `${stale ? "Последний сохранённый курс" : "Источник: Rapira"} · обновлено ${formatTimestamp(payload.fetchedAt)}`;
+    ratesMeta.textContent = stale ? `Курс устарел · обновлено в ${formatTimestamp(payload.updatedAt)}` : `Обновлено в ${formatTimestamp(payload.updatedAt)}`;
     updateQuote();
   };
 
@@ -176,7 +186,7 @@
     surveyTitle.innerHTML = surveyHeadings[currentSurveyStep];
     surveyProgressBar.style.width = `${((currentSurveyStep + 1) / surveySteps.length) * 100}%`;
     surveyBack.hidden = currentSurveyStep === 0;
-    surveyNext.firstChild.textContent = currentSurveyStep === surveySteps.length - 1 ? "Проверить заявку\n" : "Продолжить\n";
+    surveyNext.firstChild.textContent = currentSurveyStep === surveySteps.length - 1 ? "Создать заявку\n" : "Продолжить\n";
     surveyError.textContent = "";
     amountError.textContent = "";
     amountInput.removeAttribute("aria-invalid");
@@ -220,9 +230,9 @@
 
     const output = rateCore.formatNumber(currentQuote.outputAmount, currentQuote.outputDecimals);
     const rate = rateCore.formatNumber(currentQuote.rate, currentQuote.rateDecimals);
-    quoteState.textContent = currentQuote.stale ? "Курс устарел" : "По курсу Rapira";
+    quoteState.textContent = currentQuote.stale ? "Курс устарел" : "Предварительный курс Papakha";
     quoteValue.textContent = `${output} ${currentQuote.receiveCurrency}`;
-    quoteRate.textContent = `1 ${currentQuote.giveCurrency} = ${rate} ${currentQuote.receiveCurrency} · ${formatTimestamp(currentQuote.fetchedAt)}`;
+    quoteRate.textContent = `1 ${currentQuote.giveCurrency} = ${rate} ${currentQuote.receiveCurrency} · обновлено в ${formatTimestamp(currentQuote.updatedAt)}`;
   };
 
   const createDraftText = (draft) => [
@@ -231,8 +241,9 @@
     `Получаю: ${draft.receiveAmount ? `${draft.receiveAmount} ` : ""}${draft.receiveCurrency}`,
     `Способ расчёта: ${draft.method}`,
     `Предварительный курс: ${draft.rateLabel || "после подтверждения"}`,
-    draft.rateUpdatedAt ? `Курс Rapira обновлён: ${draft.rateUpdatedAt}${draft.rateStale ? " (устарел)" : ""}` : null,
-    "Финальный курс фиксируется после подтверждения менеджером",
+    draft.dealPublicId ? `Номер: ${draft.dealPublicId}` : null,
+    draft.rateUpdatedAt ? `Обновлено в ${draft.rateUpdatedAt}${draft.rateStale ? " (курс устарел)" : ""}` : null,
+    "Финальный курс подтверждает менеджер",
   ].filter(Boolean).join("\n");
 
   const openSheet = (draft) => {
@@ -244,8 +255,9 @@
     const rateNote = document.getElementById("summary-rate-note");
     rateNote.hidden = !draft.rateStale;
     rateNote.textContent = draft.rateStale
-      ? `Использован последний сохранённый курс Rapira от ${draft.rateUpdatedAt}. Финальные условия необходимо подтвердить.`
+      ? `Использован последний сохранённый курс от ${draft.rateUpdatedAt}. Финальный курс подтверждает менеджер.`
       : "";
+    renderDealState(currentDeal);
     sheet.classList.add("is-open");
     sheet.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
@@ -259,6 +271,69 @@
     document.body.style.overflow = "";
     amountInput.focus();
     tap();
+  };
+
+  const statusLabels = Object.freeze({
+    new: "Новая", reviewing: "Проверяется", rate_offered: "Курс предложен",
+    rate_accepted: "Курс принят", awaiting_payment: "Ожидается оплата",
+    payment_review: "Проверяем оплату", exchange_in_progress: "Обмен выполняется",
+    completed: "Завершена", cancelled: "Отменена", dispute: "На проверке",
+  });
+
+  const authHeaders = () => {
+    if (telegram?.initData) return { "X-Telegram-Init-Data": telegram.initData };
+    const developmentUserId = window.PAPAKHA_CONFIG?.developmentUserId;
+    return developmentUserId ? { "X-Dev-Telegram-User": String(developmentUserId) } : {};
+  };
+
+  const apiRequest = async (path, options = {}) => {
+    if (!apiBaseUrl) throw new Error("Сервис заявок не настроен");
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      headers: { Accept: "application/json", ...(options.body ? { "Content-Type": "application/json" } : {}), ...authHeaders(), ...(options.headers || {}) },
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error?.message || "Не удалось выполнить запрос");
+    return payload;
+  };
+
+  const openAdminPanel = async () => {
+    try {
+      notify("Открываем админ-панель…");
+      const payload = await apiRequest("/api/admin/handoff", { method: "POST", body: "{}" });
+      window.location.replace(payload.adminUrl);
+    } catch (error) {
+      notify(error.message || "Нет доступа к админ-панели");
+    }
+  };
+
+  function renderDealState(deal) {
+    currentDeal = deal || null;
+    dealState.hidden = !deal;
+    if (!deal) {
+      sheetEyebrow.textContent = "ОТПРАВКА ЗАЯВКИ";
+      sheetTitle.innerHTML = "Проверьте<br />заявку.";
+      clientDealActions.hidden = true;
+      return;
+    }
+    sheetEyebrow.textContent = "ЗАЯВКА ОТПРАВЛЕНА";
+    sheetTitle.innerHTML = "Менеджер<br />уже видит её.";
+    dealPublicId.textContent = deal.publicId;
+    dealStatus.textContent = statusLabels[deal.status] || deal.status;
+    sheetNote.textContent = deal.paymentInstructions || "Следите за статусом здесь и в сообщениях Telegram. Финальный курс подтверждает менеджер.";
+    clientDealActions.hidden = false;
+    clientDealActions.querySelector('[data-deal-action="accept-rate"]').hidden = deal.status !== "rate_offered";
+    clientDealActions.querySelector('[data-deal-action="reject-rate"]').hidden = deal.status !== "rate_offered";
+    clientDealActions.querySelector('[data-deal-action="payment-sent"]').hidden = !["rate_accepted", "awaiting_payment"].includes(deal.status);
+    currentDraft = currentDraft ? { ...currentDraft, dealPublicId: deal.publicId } : currentDraft;
+    if (["completed", "cancelled"].includes(deal.status)) window.clearTimeout(dealPollTimer);
+  }
+
+  const pollDeal = async () => {
+    if (!currentDeal?.id) return;
+    try { renderDealState((await apiRequest(`/api/deals/${encodeURIComponent(currentDeal.id)}`)).deal); } catch { /* Telegram notifications remain available. */ }
+    window.clearTimeout(dealPollTimer);
+    if (currentDeal && !["completed", "cancelled"].includes(currentDeal.status)) dealPollTimer = window.setTimeout(pollDeal, 10000);
   };
 
   const initTelegram = () => {
@@ -311,7 +386,7 @@
     return null;
   };
 
-  const finishSurvey = () => {
+  const finishSurvey = async () => {
     updateQuote();
     const receiveAmount = currentQuote
       ? rateCore.formatNumber(currentQuote.outputAmount, currentQuote.outputDecimals)
@@ -326,7 +401,7 @@
       method: selectedValue("method"),
       receiveAmount,
       rateLabel,
-      rateUpdatedAt: currentQuote ? formatTimestamp(currentQuote.fetchedAt) : null,
+      rateUpdatedAt: currentQuote ? formatTimestamp(currentQuote.updatedAt) : null,
       rateStale: Boolean(currentQuote?.stale),
     };
 
@@ -336,7 +411,25 @@
       // The app remains fully usable when device storage is unavailable.
     }
 
-    openSheet(draft);
+    surveyNext.disabled = true;
+    surveyNext.firstChild.textContent = "Отправляем\n";
+    try {
+      const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const payload = await apiRequest("/api/deals", {
+        method: "POST",
+        headers: { "Idempotency-Key": requestId },
+        body: JSON.stringify({ amount: amountInput.value.trim().replace(/\s/g, "").replace(",", "."), giveCurrency: draft.giveCurrency, receiveCurrency: draft.receiveCurrency, method: draft.method }),
+      });
+      currentDeal = payload.deal;
+      openSheet({ ...draft, dealPublicId: payload.deal.publicId });
+      pollDeal();
+    } catch (error) {
+      surveyError.textContent = error.message || "Не удалось отправить заявку. Попробуйте ещё раз.";
+      telegram?.HapticFeedback?.notificationOccurred("error");
+    } finally {
+      surveyNext.disabled = false;
+      surveyNext.firstChild.textContent = "Создать заявку\n";
+    }
   };
 
   surveyNext.addEventListener("click", () => {
@@ -386,6 +479,18 @@
     }
   });
 
+  clientDealActions.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-deal-action]");
+    if (!button || !currentDeal) return;
+    button.disabled = true;
+    try {
+      const payload = await apiRequest(`/api/deals/${encodeURIComponent(currentDeal.id)}/${button.dataset.dealAction}`, { method: "POST", body: "{}" });
+      renderDealState(payload.deal);
+      notify("Статус обновлён");
+    } catch (error) { notify(error.message || "Не удалось обновить статус"); }
+    finally { button.disabled = false; }
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && sheet.classList.contains("is-open")) closeSheet();
   });
@@ -407,6 +512,23 @@
   setSurveyStep(0);
   initTelegram();
   loadRates();
+  const launchParam = telegram?.initDataUnsafe?.start_param
+    || new URLSearchParams(window.location.search).get("tgWebAppStartParam")
+    || new URLSearchParams(window.location.search).get("startapp");
+  if (launchParam === "admin") openAdminPanel();
+  const requestedDeal = new URLSearchParams(window.location.search).get("deal");
+  if (requestedDeal) {
+    apiRequest(`/api/deals/${encodeURIComponent(requestedDeal)}`).then(({ deal }) => {
+      currentDeal = deal;
+      openSheet({
+        amount: deal.giveAmount, giveCurrency: deal.giveCurrency, receiveCurrency: deal.receiveCurrency,
+        method: deal.paymentMethod, receiveAmount: deal.receiveAmount, rateLabel: deal.quotedRate,
+        rateUpdatedAt: deal.quoteUpdatedAt ? formatTimestamp(deal.quoteUpdatedAt) : null,
+        rateStale: deal.quoteStale, dealPublicId: deal.publicId,
+      });
+      pollDeal();
+    }).catch(() => notify("Не удалось открыть заявку"));
+  }
   window.setInterval(loadRates, 30000);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") loadRates();

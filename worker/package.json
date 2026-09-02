@@ -1,9 +1,12 @@
 {
-  "name": "papakha-rapira-rates",
+  "name": "papakha-rates",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
+    "dev": "wrangler dev --env dev --local --persist-to .wrangler/state",
+    "db:migrate:local": "wrangler d1 migrations apply papakha-deals --local --persist-to .wrangler/state",
+    "db:seed:local": "wrangler d1 execute papakha-deals --local --persist-to .wrangler/state --file scripts/seed-development.sql",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Papakha Exchange · Управление</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header><a class="brand" href="#">papakha<br><span>exchange</span></a><div><span id="service-state">Сервис курсов</span><button id="logout" class="quiet" hidden>Выйти</button></div></header>
+  <main>
+    <section id="login" class="login card">
+      <p class="eyebrow">ЗАКРЫТАЯ ПАНЕЛЬ</p><h1>Управление<br>сделками.</h1>
+      <p>Вход доступен только сотрудникам, добавленным владельцем.</p>
+      <button id="login-button" class="primary">Открыть через Telegram</button><p id="login-error" class="error"></p>
+    </section>
+
+    <section id="workspace" hidden>
+      <div class="welcome"><div><p class="eyebrow">PAPAKHA OPERATIONS</p><h1>Сделки.</h1></div><p id="admin-name"></p></div>
+      <nav><button class="tab active" data-tab="deals">Заявки</button><button class="tab" data-tab="settings">Настройки</button><button class="tab" data-tab="admins">Доступ</button><button class="tab" data-tab="audit">Журнал</button></nav>
+
+      <section data-panel="deals">
+        <div id="metrics" class="metrics"></div>
+        <div class="filters card"><input id="search" placeholder="Номер, username или Telegram ID"><select id="status-filter"><option value="">Все статусы</option></select><button id="refresh" class="quiet">Обновить</button></div>
+        <div class="table-wrap card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Отдаёт</th><th>Получает</th><th>Статус</th><th>Создана</th></tr></thead><tbody id="deals-body"></tbody></table></div>
+      </section>
+
+      <section data-panel="settings" hidden>
+        <form id="settings-form" class="settings card">
+          <p class="eyebrow">КУРС PAPAKHA</p><h2>Настройки расчёта</h2>
+          <label>Наценка при продаже USDT, %<input id="sell-markup" type="number" min="0" max="30" step="0.01"></label>
+          <label>Корректировка при покупке USDT, %<input id="buy-markup" type="number" min="-30" max="0" step="0.01"></label>
+          <label>Фиксация курса, минут<input id="lock-minutes" type="number" min="1" max="60"></label>
+          <label>Минимальная сумма<input id="minimum-amount" inputmode="decimal"></label>
+          <label>Максимальная сумма<input id="maximum-amount" inputmode="decimal"></label>
+          <label>Поддерживаемые валюты через запятую<input id="supported-currencies"></label>
+          <label>Автоматический расчёт через запятую<input id="automatic-currencies"></label>
+          <label>Допустимый возраст курса, секунд<input id="stale-seconds" type="number" min="30" max="3600"></label>
+          <label class="check"><input id="maintenance" type="checkbox"> Режим обслуживания</label>
+          <p class="hint">Изменения влияют только на новые расчёты. Зафиксированные сделки не пересчитываются.</p>
+          <button class="primary" type="submit">Сохранить</button><p id="settings-message"></p>
+        </form>
+      </section>
+
+      <section data-panel="admins" hidden><div class="card"><p class="eyebrow">ТОЛЬКО ВЛАДЕЛЕЦ</p><h2>Доступ сотрудников</h2><form id="admin-form" class="admin-access-form"><input id="admin-id" required inputmode="numeric" placeholder="Telegram ID"><input id="admin-display-name" placeholder="Имя"><select id="admin-role"><option value="manager">Менеджер</option><option value="viewer">Наблюдатель</option><option value="owner">Владелец</option></select><label class="check"><input id="admin-active" type="checkbox" checked> Доступ активен</label><button class="primary">Сохранить доступ</button></form><div id="admins-list" class="timeline"></div></div></section>
+
+      <section data-panel="audit" hidden><div class="card"><p class="eyebrow">НЕИЗМЕНЯЕМАЯ ИСТОРИЯ</p><h2>Журнал действий</h2><div id="audit-list" class="timeline"></div></div></section>
+    </section>
+  </main>
+
+  <aside id="drawer" aria-hidden="true"><button id="drawer-close" class="drawer-backdrop" aria-label="Закрыть"></button><div class="drawer-panel"><button id="close-detail" class="quiet">← Назад</button><div id="deal-detail"></div></div></aside>
+  <div id="toast" role="status"></div>
+  <script src="config.js"></script><script src="app.js"></script>
+</body>
+</html>

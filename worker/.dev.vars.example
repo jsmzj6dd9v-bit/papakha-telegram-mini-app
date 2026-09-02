@@ -1,0 +1,2 @@
+TELEGRAM_BOT_TOKEN=replace_with_bot_token
+RATE_PROVIDER_API_URL=https://provider.example/api/rates

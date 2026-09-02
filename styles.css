@@ -957,6 +957,35 @@ button {
   line-height: 1.45;
 }
 
+.deal-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+
+.deal-state strong {
+  color: var(--red);
+  text-align: right;
+}
+
+.client-deal-actions {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.client-deal-actions[hidden],
+.client-deal-actions button[hidden] {
+  display: none;
+}
+
 .toast {
   position: fixed;
   z-index: 70;

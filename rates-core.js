@@ -16,8 +16,7 @@
     const eth = payload?.rates?.["ETH/USDT"];
     return Boolean(
       payload?.ok &&
-      payload?.source === "Rapira" &&
-      payload?.fetchedAt &&
+      payload?.updatedAt &&
       positive(usdt?.sellRate) &&
       positive(usdt?.buyRate) &&
       positive(btc?.close) &&
@@ -46,6 +45,8 @@
     if (!positive(numericAmount) || giveCurrency === receiveCurrency) return null;
     if (!SUPPORTED.has(giveCurrency) || !SUPPORTED.has(receiveCurrency)) return null;
     if (!validatePayload(payload)) return null;
+    const automatic = new Set(payload.automaticCurrencies || ["RUB", "USDT", "BTC", "ETH"]);
+    if (!automatic.has(giveCurrency) || !automatic.has(receiveCurrency)) return null;
 
     const usdtAmount = toUsdt(numericAmount, giveCurrency, payload.rates);
     const outputAmount = fromUsdt(usdtAmount, receiveCurrency, payload.rates);
@@ -58,7 +59,7 @@
       rateDecimals: DECIMALS[receiveCurrency],
       giveCurrency,
       receiveCurrency,
-      fetchedAt: payload.fetchedAt,
+      updatedAt: payload.updatedAt,
       stale: Boolean(payload.stale),
     };
   };

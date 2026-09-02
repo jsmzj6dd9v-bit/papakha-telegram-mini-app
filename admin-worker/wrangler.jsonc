@@ -1,0 +1,15 @@
+{
+  "$schema": "../worker/node_modules/wrangler/config-schema.json",
+  "name": "papakha-admin",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "../admin",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "services": [{
+    "binding": "RATES_API",
+    "service": "papakha-rates"
+  }]
+}
