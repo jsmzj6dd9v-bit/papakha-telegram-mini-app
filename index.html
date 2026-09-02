@@ -56,6 +56,36 @@
             </button>
           </div>
 
+          <section class="rates-panel" aria-labelledby="rates-title">
+            <div class="rates-heading">
+              <div>
+                <p class="eyebrow">КОТИРОВКИ RAPIRA</p>
+                <h2 id="rates-title">Курс<br /><span>сейчас.</span></h2>
+              </div>
+              <span id="rates-status" class="rates-status" data-state="loading">Загрузка</span>
+            </div>
+
+            <div id="rates-grid" class="rates-grid" aria-live="polite" aria-busy="true">
+              <article class="rate-card rate-card-usdt">
+                <div class="rate-card-title"><strong>USDT</strong><small>RUB</small></div>
+                <dl>
+                  <div><dt>Купить</dt><dd id="rate-usdt-sell">—</dd></div>
+                  <div><dt>Продать</dt><dd id="rate-usdt-buy">—</dd></div>
+                </dl>
+              </article>
+              <article class="rate-card">
+                <div class="rate-card-title"><strong>BTC</strong><small>USDT</small></div>
+                <p id="rate-btc">—</p>
+              </article>
+              <article class="rate-card">
+                <div class="rate-card-title"><strong>ETH</strong><small>USDT</small></div>
+                <p id="rate-eth">—</p>
+              </article>
+            </div>
+
+            <p id="rates-meta" class="rates-meta">Получаем актуальные данные…</p>
+          </section>
+
           <div class="feature-strip" aria-label="Преимущества">
             <div>
               <span>01</span>
@@ -125,9 +155,17 @@
                 <label><input type="radio" name="method" value="Наличные" /><span><b>Наличные</b><small>Детали согласует менеджер</small></span></label>
                 <label><input type="radio" name="method" value="Перевод" /><span><b>Перевод</b><small>Реквизиты после подтверждения</small></span></label>
               </fieldset>
+              <div id="quote-panel" class="quote-panel" aria-live="polite">
+                <div class="quote-panel-label">
+                  <span>Предварительный расчёт</span>
+                  <small id="quote-state">Курс после подтверждения</small>
+                </div>
+                <strong id="quote-value">—</strong>
+                <p id="quote-rate">Выберите поддерживаемое направление</p>
+              </div>
               <div class="notice">
                 <span class="notice-symbol">i</span>
-                <p><strong>Без выдуманных цифр.</strong> Финальный курс и сумма появятся только после подтверждения условий.</p>
+                <p><strong>Котировка предварительная.</strong> Финальный курс и сумма фиксируются только после подтверждения заявки менеджером.</p>
               </div>
             </section>
 
@@ -198,8 +236,10 @@
           <div><dt>Отдаёте</dt><dd id="summary-give"></dd></div>
           <div><dt>Получаете</dt><dd id="summary-receive"></dd></div>
           <div><dt>Способ</dt><dd id="summary-method"></dd></div>
-          <div><dt>Курс</dt><dd>Подтверждается</dd></div>
+          <div><dt>Курс</dt><dd id="summary-rate">Подтверждается</dd></div>
         </dl>
+
+        <p id="summary-rate-note" class="rate-note" hidden></p>
 
         <p class="sheet-note">
           Сейчас это локальный черновик: данные никуда не отправляются. Для приёма заявок нужно подключить сервер бота.
@@ -215,6 +255,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+    <script src="config.js"></script>
+    <script src="rates-core.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

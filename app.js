@@ -2,6 +2,8 @@
   "use strict";
 
   const telegram = window.Telegram?.WebApp;
+  const rateCore = window.PapakhaRates;
+  const ratesApiUrl = window.PAPAKHA_CONFIG?.ratesApiUrl?.trim();
   const screens = [...document.querySelectorAll("[data-screen]")];
   const navButtons = [...document.querySelectorAll(".nav-button")];
   const screenLinks = [...document.querySelectorAll("[data-screen-link]")];
@@ -19,9 +21,19 @@
   const sheet = document.getElementById("request-sheet");
   const toast = document.getElementById("toast");
   const copyButton = document.getElementById("copy-request");
+  const ratesGrid = document.getElementById("rates-grid");
+  const ratesStatus = document.getElementById("rates-status");
+  const ratesMeta = document.getElementById("rates-meta");
+  const quotePanel = document.getElementById("quote-panel");
+  const quoteState = document.getElementById("quote-state");
+  const quoteValue = document.getElementById("quote-value");
+  const quoteRate = document.getElementById("quote-rate");
   let currentDraft = null;
+  let currentRates = null;
+  let currentQuote = null;
   let currentSurveyStep = 0;
   let toastTimer = null;
+  let ratesRequest = null;
 
   const surveyHeadings = [
     "Что<br />отдаёте?",
@@ -39,6 +51,93 @@
     toast.textContent = message;
     toast.classList.add("is-visible");
     toastTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
+  };
+
+  const formatTimestamp = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "время неизвестно";
+    return date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  const payloadIsStale = (payload) => {
+    const fetchedAt = new Date(payload?.fetchedAt).getTime();
+    return Boolean(payload?.stale || !Number.isFinite(fetchedAt) || Date.now() - fetchedAt > 120000);
+  };
+
+  const storeRates = (payload) => {
+    try {
+      window.localStorage.setItem("papakhaLastRates", JSON.stringify(payload));
+    } catch {
+      // A live response remains usable when device storage is unavailable.
+    }
+  };
+
+  const readStoredRates = () => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("papakhaLastRates"));
+      if (rateCore.validatePayload(stored)) return { ...stored, stale: true };
+    } catch {
+      // Ignore invalid or unavailable local storage.
+    }
+    return null;
+  };
+
+  const renderRates = (payload, state = "fresh") => {
+    const hasRates = rateCore.validatePayload(payload);
+    ratesGrid.setAttribute("aria-busy", "false");
+
+    if (!hasRates) {
+      ratesStatus.dataset.state = "error";
+      ratesStatus.textContent = "Недоступно";
+      ratesMeta.textContent = "Не удалось получить котировки. Расчёт появится после восстановления связи.";
+      ["rate-usdt-sell", "rate-usdt-buy", "rate-btc", "rate-eth"].forEach((id) => {
+        document.getElementById(id).textContent = "—";
+      });
+      updateQuote();
+      return;
+    }
+
+    const stale = state === "stale" || payloadIsStale(payload);
+    ratesStatus.dataset.state = stale ? "stale" : "fresh";
+    ratesStatus.textContent = stale ? "Курс устарел" : "Актуально";
+    document.getElementById("rate-usdt-sell").textContent = `${rateCore.formatNumber(payload.rates["USDT/RUB"].sellRate, 2)} ₽`;
+    document.getElementById("rate-usdt-buy").textContent = `${rateCore.formatNumber(payload.rates["USDT/RUB"].buyRate, 2)} ₽`;
+    document.getElementById("rate-btc").textContent = `${rateCore.formatNumber(payload.rates["BTC/USDT"].close, 2)} USDT`;
+    document.getElementById("rate-eth").textContent = `${rateCore.formatNumber(payload.rates["ETH/USDT"].close, 2)} USDT`;
+    ratesMeta.textContent = `${stale ? "Последний сохранённый курс" : "Источник: Rapira"} · обновлено ${formatTimestamp(payload.fetchedAt)}`;
+    updateQuote();
+  };
+
+  const loadRates = async () => {
+    if (ratesRequest) return ratesRequest;
+
+    ratesGrid.setAttribute("aria-busy", "true");
+    ratesStatus.dataset.state = "loading";
+    ratesStatus.textContent = "Обновляем";
+
+    ratesRequest = (async () => {
+      try {
+        if (!ratesApiUrl) throw new Error("Rates API is not configured");
+        const response = await fetch(ratesApiUrl, { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error(`Rates API returned ${response.status}`);
+        const payload = await response.json();
+        if (!rateCore.validatePayload(payload)) throw new Error("Invalid rates payload");
+        currentRates = { ...payload, stale: payloadIsStale(payload) };
+        storeRates(currentRates);
+        renderRates(currentRates, currentRates.stale ? "stale" : "fresh");
+      } catch {
+        currentRates = currentRates || readStoredRates();
+        renderRates(currentRates, currentRates ? "stale" : "error");
+      } finally {
+        ratesRequest = null;
+      }
+    })();
+
+    return ratesRequest;
   };
 
   const showScreen = (screenName, restartSurvey = false) => {
@@ -82,6 +181,7 @@
     amountError.textContent = "";
     amountInput.removeAttribute("aria-invalid");
     updateReceiveChoices();
+    updateQuote();
     window.scrollTo({ top: 0, behavior: "smooth" });
     tap();
     if (currentSurveyStep === 1) window.setTimeout(() => amountInput.focus(), 260);
@@ -96,19 +196,56 @@
 
   const formatTypedAmount = (value) => value.trim().replace(/\s/g, "").replace(".", ",");
 
+  const updateQuote = () => {
+    const amount = parseAmount(amountInput.value);
+    const giveCurrency = selectedValue("giveCurrency");
+    const receiveCurrency = selectedValue("receiveCurrency");
+    currentQuote = amount && currentRates ? rateCore.calculateQuote({
+      amount,
+      giveCurrency,
+      receiveCurrency,
+      payload: currentRates,
+    }) : null;
+
+    quotePanel.classList.toggle("is-stale", Boolean(currentQuote?.stale));
+
+    if (!currentQuote) {
+      quoteState.textContent = currentRates ? "Курс после подтверждения" : "Курс недоступен";
+      quoteValue.textContent = "—";
+      quoteRate.textContent = ["KZT", "AED", "USD"].includes(giveCurrency) || ["KZT", "AED", "USD"].includes(receiveCurrency)
+        ? "Для этого направления условия подтверждает менеджер"
+        : "Выберите сумму и поддерживаемое направление";
+      return;
+    }
+
+    const output = rateCore.formatNumber(currentQuote.outputAmount, currentQuote.outputDecimals);
+    const rate = rateCore.formatNumber(currentQuote.rate, currentQuote.rateDecimals);
+    quoteState.textContent = currentQuote.stale ? "Курс устарел" : "По курсу Rapira";
+    quoteValue.textContent = `${output} ${currentQuote.receiveCurrency}`;
+    quoteRate.textContent = `1 ${currentQuote.giveCurrency} = ${rate} ${currentQuote.receiveCurrency} · ${formatTimestamp(currentQuote.fetchedAt)}`;
+  };
+
   const createDraftText = (draft) => [
     "Заявка Papakha Exchange",
     `Отдаю: ${draft.amount} ${draft.giveCurrency}`,
-    `Получаю: ${draft.receiveCurrency}`,
+    `Получаю: ${draft.receiveAmount ? `${draft.receiveAmount} ` : ""}${draft.receiveCurrency}`,
     `Способ расчёта: ${draft.method}`,
-    "Курс и итоговая сумма: после подтверждения",
-  ].join("\n");
+    `Предварительный курс: ${draft.rateLabel || "после подтверждения"}`,
+    draft.rateUpdatedAt ? `Курс Rapira обновлён: ${draft.rateUpdatedAt}${draft.rateStale ? " (устарел)" : ""}` : null,
+    "Финальный курс фиксируется после подтверждения менеджером",
+  ].filter(Boolean).join("\n");
 
   const openSheet = (draft) => {
     currentDraft = draft;
     document.getElementById("summary-give").textContent = `${draft.amount} ${draft.giveCurrency}`;
-    document.getElementById("summary-receive").textContent = draft.receiveCurrency;
+    document.getElementById("summary-receive").textContent = `${draft.receiveAmount ? `${draft.receiveAmount} ` : ""}${draft.receiveCurrency}`;
     document.getElementById("summary-method").textContent = draft.method;
+    document.getElementById("summary-rate").textContent = draft.rateLabel || "Подтверждается";
+    const rateNote = document.getElementById("summary-rate-note");
+    rateNote.hidden = !draft.rateStale;
+    rateNote.textContent = draft.rateStale
+      ? `Использован последний сохранённый курс Rapira от ${draft.rateUpdatedAt}. Финальные условия необходимо подтвердить.`
+      : "";
     sheet.classList.add("is-open");
     sheet.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
@@ -158,6 +295,7 @@
   amountInput.addEventListener("input", () => {
     amountError.textContent = "";
     amountInput.removeAttribute("aria-invalid");
+    updateQuote();
   });
 
   const validateCurrentStep = () => {
@@ -174,11 +312,22 @@
   };
 
   const finishSurvey = () => {
+    updateQuote();
+    const receiveAmount = currentQuote
+      ? rateCore.formatNumber(currentQuote.outputAmount, currentQuote.outputDecimals)
+      : null;
+    const rateLabel = currentQuote
+      ? `1 ${currentQuote.giveCurrency} = ${rateCore.formatNumber(currentQuote.rate, currentQuote.rateDecimals)} ${currentQuote.receiveCurrency}`
+      : null;
     const draft = {
       amount: formatTypedAmount(amountInput.value),
       giveCurrency: selectedValue("giveCurrency"),
       receiveCurrency: selectedValue("receiveCurrency"),
       method: selectedValue("method"),
+      receiveAmount,
+      rateLabel,
+      rateUpdatedAt: currentQuote ? formatTimestamp(currentQuote.fetchedAt) : null,
+      rateStale: Boolean(currentQuote?.stale),
     };
 
     try {
@@ -207,6 +356,7 @@
     input.addEventListener("change", () => {
       surveyError.textContent = "";
       if (input.name === "giveCurrency") updateReceiveChoices();
+      updateQuote();
       tap("medium");
       window.setTimeout(() => {
         if (currentSurveyStep !== 1 && currentSurveyStep < surveySteps.length - 1) {
@@ -256,4 +406,9 @@
 
   setSurveyStep(0);
   initTelegram();
+  loadRates();
+  window.setInterval(loadRates, 30000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") loadRates();
+  });
 })();
