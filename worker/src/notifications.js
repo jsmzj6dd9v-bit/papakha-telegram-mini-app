@@ -22,7 +22,10 @@ export const deliverNotification = async (env, outboxId) => {
           reply_markup: appUrl ? { inline_keyboard: [[{ text: "Открыть заявку", web_app: { url: appUrl.toString() } }]] } : undefined }),
       });
     } finally { clearTimeout(timeout); }
-    if (!response.ok) throw new Error("NOTIFICATION_REJECTED");
+    if (!response.ok) {
+      console.error("Telegram notification rejected", { status: response.status });
+      throw new Error("NOTIFICATION_REJECTED");
+    }
     await db.prepare("UPDATE notification_outbox SET status = 'sent', sent_at = ?, last_error = NULL WHERE id = ?").bind(new Date().toISOString(), item.id).run();
   } catch (error) {
     const nextAttempt = new Date(Date.now() + Math.min(300000, 5000 * (2 ** Math.min(item.attempt_count, 6)))).toISOString();
