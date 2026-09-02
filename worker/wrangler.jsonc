@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "papakha-rapira-rates",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://jsmzj6dd9v-bit.github.io"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "RATES_CACHE",
+      "id": "3127009eea63449ea22b5ddfaf6c30ba"
+    }
+  ]
+}
