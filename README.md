@@ -40,8 +40,12 @@ Telegram Mini App с актуальными предварительными к�
 
 Тестовый заголовок пользователя разрешён только в явной локальной среде `dev`. Production-конфигурация его блокирует.
 
-## Перед публикацией
+## Production
 
-Нужно создать новые нейтральные ресурсы: Worker `papakha-rates`, KV `papakha-rates-cache`, D1 `papakha-deals` и очередь `papakha-notifications`. Их реальные идентификаторы вносятся в `wrangler.jsonc` только при подтверждённом развёртывании. Старые ресурсы не удаляются без отдельного подтверждения владельца.
+- Mini App: `https://jsmzj6dd9v-bit.github.io/papakha-telegram-mini-app/`;
+- API: `https://papakha-rates.jsmzj6dd9v.workers.dev`;
+- админ-панель: `https://papakha-admin.jsmzj6dd9v.workers.dev`.
+
+Worker `papakha-rates` подключён к отдельным KV `papakha-rates-cache`, D1 `papakha-deals` и Queue `papakha-notifications`. Реальные идентификаторы ресурсов записаны в production-конфигурации, а секреты находятся только в Cloudflare Workers Secrets. Предыдущие Worker и KV сохранены как аварийный резерв и не удаляются без отдельного подтверждения владельца.
 
 Финальный курс всегда подтверждает менеджер. KZT, AED и USD автоматически не рассчитываются.
