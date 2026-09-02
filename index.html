@@ -20,92 +20,75 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <button class="brand" type="button" data-screen-link="home" aria-label="На главную">
-          <span class="brand-mark" aria-hidden="true">
-            <i></i><i></i><i></i>
-          </span>
-          <span class="brand-name">papakha<br />exchange</span>
+        <button class="brand logo-window" type="button" data-screen-link="home" aria-label="На главную">
+          <img src="assets/papakha-logo-official.png" alt="papakha exchange" />
         </button>
 
-        <span class="status-chip">
+        <span class="status-chip live-pill">
           <span class="status-dot" aria-hidden="true"></span>
-          mini app
+          <b id="header-time">онлайн</b>
         </span>
       </header>
 
       <main>
-        <section class="screen is-active" data-screen="home" aria-labelledby="home-title">
-          <div class="hero">
-            <p class="eyebrow">КРИПТООБМЕН • БЕЗ ЛИШНЕГО</p>
-            <h1 id="home-title">Обмен.<br /><span>По делу.</span></h1>
-
-            <div class="coin-stage" aria-hidden="true">
-              <div class="coin coin-back"><span>₽</span></div>
-              <div class="coin coin-middle"><span>₮</span></div>
-              <div class="coin coin-front"><span>₿</span></div>
-              <span class="registered">®</span>
-            </div>
-
-            <p class="hero-copy">
-              Выберите направление и подготовьте заявку. Курс и детали подтверждаются перед сделкой.
-            </p>
-
-            <button class="primary-button" type="button" data-screen-link="exchange">
-              Начать обмен
-              <span aria-hidden="true">↗</span>
-            </button>
+        <section class="screen home-screen is-active" data-screen="home" aria-labelledby="rates-title">
+          <div class="home-heading">
+            <p class="eyebrow">КУРС · ОНЛАЙН</p>
+            <h1 id="rates-title">Курс<br /><em>сейчас.</em></h1>
+            <p id="rates-meta" class="rates-meta update-line">Получаем актуальные данные…</p>
           </div>
 
-          <section class="rates-panel" aria-labelledby="rates-title">
+          <section class="rates-panel" aria-label="Актуальные курсы">
             <div class="rates-heading">
-              <div>
-                <p class="eyebrow">КУРС · ОНЛАЙН</p>
-                <h2 id="rates-title">Курс<br /><span>сейчас.</span></h2>
-              </div>
+              <div class="panel-label"><strong>USDT</strong><span>/ RUB</span></div>
               <span id="rates-status" class="rates-status" data-state="loading">Загрузка</span>
             </div>
 
             <div id="rates-grid" class="rates-grid" aria-live="polite" aria-busy="true">
               <article class="rate-card rate-card-usdt">
-                <div class="rate-card-title"><strong>USDT</strong><small>RUB</small></div>
                 <dl>
-                  <div><dt>Купить</dt><dd id="rate-usdt-sell">—</dd></div>
-                  <div><dt>Продать</dt><dd id="rate-usdt-buy">—</dd></div>
+                  <div><dt>Купить USDT</dt><dd id="rate-usdt-sell">—</dd></div>
+                  <div><dt>Продать USDT</dt><dd id="rate-usdt-buy">—</dd></div>
                 </dl>
-              </article>
-              <article class="rate-card">
-                <div class="rate-card-title"><strong>BTC</strong><small>USDT</small></div>
-                <p id="rate-btc">—</p>
-              </article>
-              <article class="rate-card">
-                <div class="rate-card-title"><strong>ETH</strong><small>USDT</small></div>
-                <p id="rate-eth">—</p>
+                <p class="panel-source">Предварительный курс · финальный подтверждает менеджер</p>
               </article>
             </div>
+          </section>
 
-            <p id="rates-meta" class="rates-meta">Получаем актуальные данные…</p>
+          <div class="market-row">
+            <article class="rate-card">
+              <div class="rate-card-title"><strong>BTC</strong><small>/ USDT</small></div>
+              <p id="rate-btc">—</p>
+            </article>
+            <article class="rate-card">
+              <div class="rate-card-title"><strong>ETH</strong><small>/ USDT</small></div>
+              <p id="rate-eth">—</p>
+            </article>
+          </div>
+
+          <button class="primary-button home-primary" type="button" data-screen-link="exchange">
+            Начать обмен
+            <span aria-hidden="true">↗</span>
+          </button>
+
+          <section class="brand-band" aria-label="Преимущества Papakha Exchange">
+            <div>
+              <p class="eyebrow">PAPAKHA EXCHANGE®</p>
+              <h2>Условия.<br />До сделки.</h2>
+            </div>
+            <img src="assets/papakha-coins-official-red.png" alt="" />
           </section>
 
           <div class="feature-strip" aria-label="Преимущества">
-            <div>
-              <span>01</span>
-              <strong>Понятный процесс</strong>
-            </div>
-            <div>
-              <span>02</span>
-              <strong>Условия до сделки</strong>
-            </div>
-            <div>
-              <span>03</span>
-              <strong>Поддержка в Telegram</strong>
-            </div>
+            <div><span>01</span><strong>Понятный процесс</strong></div>
+            <div><span>02</span><strong>Поддержка в Telegram</strong></div>
           </div>
         </section>
 
         <section class="screen" data-screen="exchange" aria-labelledby="exchange-title">
           <div class="section-heading">
             <p id="survey-counter" class="eyebrow">ШАГ 1 ИЗ 4</p>
-            <h2 id="exchange-title">Что<br />отдаёте?</h2>
+            <h2 id="exchange-title">Что<br /><em>отдаёте?</em></h2>
           </div>
 
           <div class="survey-progress" aria-hidden="true"><span id="survey-progress-bar"></span></div>
@@ -114,10 +97,10 @@
             <section class="survey-step is-active" data-survey-step="0">
               <p class="survey-hint">Выберите валюту, которую хотите обменять.</p>
               <fieldset class="choice-list" aria-label="Валюта, которую отдаёте">
+                <label><input type="radio" name="giveCurrency" value="RUB" /><span><b>RUB</b><small>Российский рубль</small></span></label>
                 <label><input type="radio" name="giveCurrency" value="USDT" /><span><b>USDT</b><small>Tether</small></span></label>
                 <label><input type="radio" name="giveCurrency" value="BTC" /><span><b>BTC</b><small>Bitcoin</small></span></label>
                 <label><input type="radio" name="giveCurrency" value="ETH" /><span><b>ETH</b><small>Ethereum</small></span></label>
-                <label><input type="radio" name="giveCurrency" value="RUB" /><span><b>RUB</b><small>Российский рубль</small></span></label>
                 <label><input type="radio" name="giveCurrency" value="KZT" /><span><b>KZT</b><small>Казахстанский тенге</small></span></label>
                 <label><input type="radio" name="giveCurrency" value="AED" /><span><b>AED</b><small>Дирхам ОАЭ</small></span></label>
                 <label><input type="radio" name="giveCurrency" value="USD" /><span><b>USD</b><small>Доллар США</small></span></label>
@@ -139,13 +122,13 @@
             <section class="survey-step" data-survey-step="2">
               <p class="survey-hint">Выберите валюту, которую хотите получить.</p>
               <fieldset class="choice-list" aria-label="Валюта, которую получаете">
+                <label><input type="radio" name="receiveCurrency" value="USDT" /><span><b>USDT</b><small>Tether</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="BTC" /><span><b>BTC</b><small>Bitcoin</small></span></label>
+                <label><input type="radio" name="receiveCurrency" value="ETH" /><span><b>ETH</b><small>Ethereum</small></span></label>
                 <label><input type="radio" name="receiveCurrency" value="RUB" /><span><b>RUB</b><small>Российский рубль</small></span></label>
                 <label><input type="radio" name="receiveCurrency" value="KZT" /><span><b>KZT</b><small>Казахстанский тенге</small></span></label>
                 <label><input type="radio" name="receiveCurrency" value="AED" /><span><b>AED</b><small>Дирхам ОАЭ</small></span></label>
                 <label><input type="radio" name="receiveCurrency" value="USD" /><span><b>USD</b><small>Доллар США</small></span></label>
-                <label><input type="radio" name="receiveCurrency" value="USDT" /><span><b>USDT</b><small>Tether</small></span></label>
-                <label><input type="radio" name="receiveCurrency" value="BTC" /><span><b>BTC</b><small>Bitcoin</small></span></label>
-                <label><input type="radio" name="receiveCurrency" value="ETH" /><span><b>ETH</b><small>Ethereum</small></span></label>
               </fieldset>
             </section>
 

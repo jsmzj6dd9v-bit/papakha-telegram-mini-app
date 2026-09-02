@@ -32,6 +32,7 @@
   const ratesGrid = document.getElementById("rates-grid");
   const ratesStatus = document.getElementById("rates-status");
   const ratesMeta = document.getElementById("rates-meta");
+  const headerTime = document.getElementById("header-time");
   const quotePanel = document.getElementById("quote-panel");
   const quoteState = document.getElementById("quote-state");
   const quoteValue = document.getElementById("quote-value");
@@ -46,10 +47,10 @@
   let ratesRequest = null;
 
   const surveyHeadings = [
-    "Что<br />отдаёте?",
-    "Какая<br />сумма?",
-    "Что хотите<br />получить?",
-    "Как<br />рассчитаться?",
+    "Что<br /><em>отдаёте?</em>",
+    "Какая<br /><em>сумма?</em>",
+    "Что хотите<br /><em>получить?</em>",
+    "Как<br /><em>рассчитаться?</em>",
   ];
 
   const tap = (style = "light") => {
@@ -119,6 +120,7 @@
     document.getElementById("rate-btc").textContent = `${rateCore.formatNumber(payload.rates["BTC/USDT"].close, 2)} USDT`;
     document.getElementById("rate-eth").textContent = `${rateCore.formatNumber(payload.rates["ETH/USDT"].close, 2)} USDT`;
     ratesMeta.textContent = stale ? `Курс устарел · обновлено в ${formatTimestamp(payload.updatedAt)}` : `Обновлено в ${formatTimestamp(payload.updatedAt)}`;
+    if (headerTime) headerTime.textContent = formatTimestamp(payload.updatedAt).slice(0, 5);
     updateQuote();
   };
 
@@ -362,7 +364,7 @@
 
   screenLinks.forEach((button) => {
     button.addEventListener("click", () => {
-      const fromHomeCta = button.matches(".hero .primary-button");
+      const fromHomeCta = button.matches(".home-primary");
       showScreen(button.dataset.screenLink, fromHomeCta);
     });
   });
@@ -507,6 +509,11 @@
     }
   } catch {
     // Ignore invalid or unavailable local storage.
+  }
+
+  const previewTheme = new URLSearchParams(window.location.search).get("theme");
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname) && previewTheme === "dark") {
+    document.body.classList.add("theme-dark");
   }
 
   setSurveyStep(0);

@@ -1062,3 +1062,461 @@ body.theme-dark .choice-list input:checked + span::after {
 body.theme-dark .swap-button {
   border-color: #171717;
 }
+
+/* Papakha mobile redesign — approved 2026-09-03 */
+.app-shell {
+  max-width: 430px;
+  padding: calc(10px + var(--safe-top)) 18px calc(96px + var(--safe-bottom));
+}
+
+.topbar {
+  min-height: 54px;
+  align-items: center;
+  margin-bottom: 11px;
+}
+
+.logo-window {
+  display: block;
+  width: 126px;
+  height: 41px;
+  overflow: hidden;
+}
+
+.logo-window img {
+  display: block;
+  width: 124px;
+  height: 41px;
+  object-fit: contain;
+}
+
+.live-pill {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: none;
+}
+
+.live-pill b {
+  font-variant-numeric: tabular-nums;
+}
+
+.home-heading h1 {
+  margin: 7px 0 0;
+  font-size: clamp(53px, 15.6vw, 67px);
+  font-weight: 870;
+  letter-spacing: -.075em;
+  line-height: .8;
+}
+
+.home-heading h1 em {
+  color: var(--red);
+  font-style: normal;
+}
+
+.home-heading .update-line {
+  min-height: 12px;
+  margin: 15px 0 12px;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-screen .rates-panel {
+  position: relative;
+  margin: 0;
+  padding: 14px 15px 12px;
+  overflow: hidden;
+  border: 0;
+  color: #fff;
+  background: var(--red);
+}
+
+.home-screen .rates-panel::after {
+  position: absolute;
+  z-index: 0;
+  top: -82px;
+  right: -42px;
+  width: 155px;
+  height: 155px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 18px rgb(255 255 255 / 3%), 0 0 0 36px rgb(255 255 255 / 3%);
+  content: "";
+}
+
+.home-screen .rates-heading,
+.home-screen .rates-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.panel-label {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.panel-label strong {
+  font-size: 17px;
+}
+
+.panel-label span {
+  color: rgb(255 255 255 / 68%);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.home-screen .rates-status {
+  border-color: rgb(255 255 255 / 42%);
+  color: #fff;
+  background: transparent;
+}
+
+.home-screen .rates-status[data-state="fresh"] {
+  border-color: rgb(255 255 255 / 45%);
+  color: #fff;
+  background: rgb(0 0 0 / 13%);
+}
+
+.home-screen .rates-status[data-state="stale"],
+.home-screen .rates-status[data-state="error"] {
+  border-color: #fff;
+  color: #fff;
+}
+
+.home-screen .rates-grid {
+  display: block;
+  border: 0;
+}
+
+.home-screen .rate-card-usdt {
+  min-height: 105px;
+  padding: 0;
+}
+
+.home-screen .rate-card-usdt dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 21px 0 0;
+}
+
+.home-screen .rate-card-usdt dl div {
+  display: block;
+}
+
+.home-screen .rate-card-usdt dl div + div {
+  margin: 0;
+  padding-left: 14px;
+  border-left: 1px solid rgb(255 255 255 / 25%);
+}
+
+.home-screen .rate-card-usdt dt {
+  color: rgb(255 255 255 / 68%);
+  font-size: 9px;
+}
+
+.home-screen .rate-card-usdt dd {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #fff;
+  font-size: clamp(24px, 7.4vw, 31px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-source {
+  margin: 12px 0 0;
+  color: rgb(255 255 255 / 65%);
+  font-size: 8px;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+}
+
+.market-row .rate-card {
+  min-height: 76px;
+  padding: 11px 12px 10px;
+}
+
+.market-row .rate-card + .rate-card {
+  border-left: 1px solid var(--line);
+}
+
+.market-row .rate-card-title {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.market-row .rate-card-title strong {
+  font-size: 12px;
+}
+
+.market-row .rate-card > p {
+  margin: 10px 0 0;
+  font-size: clamp(15px, 4.7vw, 20px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.home-primary {
+  min-height: 54px;
+  margin-top: 10px;
+  background: var(--ink);
+}
+
+.brand-band {
+  position: relative;
+  min-height: 126px;
+  margin-top: 10px;
+  padding: 16px;
+  overflow: hidden;
+  color: #fff;
+  background: var(--red);
+}
+
+.brand-band > div {
+  position: relative;
+  z-index: 2;
+}
+
+.brand-band h2 {
+  margin: 9px 0 0;
+  font-size: 30px;
+  line-height: .86;
+  letter-spacing: -.065em;
+}
+
+.brand-band img {
+  position: absolute;
+  right: -22px;
+  bottom: -31px;
+  width: 174px;
+  height: 174px;
+  object-fit: cover;
+  mix-blend-mode: screen;
+}
+
+.home-screen .feature-strip {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 18px;
+}
+
+.section-heading {
+  margin: 5px 0 27px;
+}
+
+.section-heading h2,
+.sheet-panel h2 {
+  margin-top: 10px;
+  color: var(--ink);
+  font-size: clamp(52px, 14.8vw, 66px);
+  line-height: .82;
+}
+
+.section-heading h2 em,
+.sheet-panel h2 em {
+  color: var(--red);
+  font-style: normal;
+}
+
+.survey-progress {
+  height: 2px;
+  margin: -13px 0 24px;
+}
+
+.survey-hint {
+  max-width: 300px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+
+.choice-list {
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.choice-list label > span {
+  display: block;
+  min-height: 91px;
+  padding: 12px;
+}
+
+.choice-list label > span::after {
+  top: 11px;
+  right: 11px;
+  font-size: 13px;
+}
+
+.choice-list b {
+  display: block;
+  font-size: 23px;
+  letter-spacing: -.05em;
+}
+
+.choice-list small {
+  display: block;
+  margin-top: 20px;
+  font-size: 8px;
+}
+
+.choice-list input:checked + span {
+  border-color: var(--red);
+  color: #fff;
+  background: var(--red);
+}
+
+.choice-list input:checked + span::after {
+  content: "✓";
+}
+
+.choice-list-method {
+  grid-template-columns: 1fr;
+}
+
+.choice-list-method label > span {
+  min-height: 78px;
+  padding: 14px;
+}
+
+.choice-list-method b {
+  font-size: 19px;
+}
+
+.choice-list-method small {
+  margin-top: 14px;
+}
+
+.amount-card {
+  padding: 18px 16px;
+  border-color: var(--red);
+}
+
+.field-label {
+  color: var(--red);
+}
+
+.amount-row {
+  margin: 19px 0 15px;
+}
+
+.amount-row input {
+  font-size: clamp(38px, 12vw, 50px);
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-row strong {
+  color: var(--red);
+  background: transparent;
+}
+
+.quote-panel {
+  border: 0;
+  color: #fff;
+  background: var(--red);
+}
+
+.quote-panel-label,
+.quote-panel-label small,
+.quote-panel > p {
+  color: rgb(255 255 255 / 70%);
+}
+
+.quote-panel > strong {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice {
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.survey-actions {
+  position: sticky;
+  bottom: calc(66px + var(--safe-bottom));
+  z-index: 8;
+  padding-top: 10px;
+  background: linear-gradient(transparent, var(--paper) 10px);
+}
+
+.survey-actions .primary-button {
+  background: var(--red);
+}
+
+.survey-actions:has(.secondary-button[hidden]) {
+  grid-template-columns: 1fr;
+}
+
+.request-summary div:nth-child(2) dd {
+  color: var(--red);
+  font-size: 18px;
+}
+
+.bottom-nav {
+  width: min(100%, 430px);
+  grid-template-columns: repeat(3, 1fr);
+}
+
+body.theme-dark .logo-window img {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}
+
+body.theme-dark .home-primary {
+  color: #fff;
+  background: var(--red);
+}
+
+body.theme-dark .brand-band img {
+  mix-blend-mode: screen;
+}
+
+body.theme-dark .choice-list input:checked + span,
+body.theme-dark .amount-row strong {
+  color: #fff;
+  background: var(--red);
+}
+
+body.theme-dark .amount-row strong {
+  color: var(--red);
+  background: transparent;
+}
+
+body.theme-dark .rates-status[data-state="fresh"] {
+  color: #fff;
+  background: rgb(0 0 0 / 13%);
+}
+
+body.theme-dark .choice-list input:checked + span small,
+body.theme-dark .choice-list input:checked + span::after {
+  color: #fff;
+}
+
+@media (max-width: 350px) {
+  .app-shell {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .home-heading h1,
+  .section-heading h2,
+  .sheet-panel h2 {
+    font-size: 52px;
+  }
+
+  .home-screen .rate-card-usdt dd {
+    font-size: 24px;
+  }
+
+  .home-screen .rates-status {
+    padding: 6px;
+    font-size: 7px;
+  }
+}
