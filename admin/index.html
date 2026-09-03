@@ -19,12 +19,18 @@
 
     <section id="workspace" hidden>
       <div class="welcome"><div><p class="eyebrow">PAPAKHA OPERATIONS</p><h1>Сделки.</h1></div><p id="admin-name"></p></div>
-      <nav><button class="tab active" data-tab="deals">Заявки</button><button class="tab" data-tab="settings">Настройки</button><button class="tab" data-tab="admins">Доступ</button><button class="tab" data-tab="audit">Журнал</button></nav>
+      <nav><button class="tab active" data-tab="deals">Заявки</button><button class="tab" data-tab="verifications">Верификация</button><button class="tab" data-tab="settings">Настройки</button><button class="tab" data-tab="admins">Доступ</button><button class="tab" data-tab="audit">Журнал</button></nav>
 
       <section data-panel="deals">
         <div id="metrics" class="metrics"></div>
         <div class="filters card"><input id="search" placeholder="Номер, username или Telegram ID"><select id="status-filter"><option value="">Все статусы</option></select><button id="refresh" class="quiet">Обновить</button></div>
         <div class="table-wrap card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Отдаёт</th><th>Получает</th><th>Статус</th><th>Создана</th></tr></thead><tbody id="deals-body"></tbody></table></div>
+      </section>
+
+      <section data-panel="verifications" hidden>
+        <div class="filters card"><select id="verification-status-filter"><option value="">Все статусы</option><option value="unverified">Не начата</option><option value="pending">Проверяется</option><option value="review">Решение специалиста</option><option value="retry">Нужно продолжить</option><option value="approved">Одобрена</option><option value="declined">Отклонена</option></select><button id="refresh-verifications" class="quiet">Обновить</button></div>
+        <div id="verifications-list" class="verification-list"></div>
+        <p class="hint">Документы, фотографии и биометрия в Papakha не сохраняются. Полные материалы доступны только в защищённом кабинете провайдера проверки.</p>
       </section>
 
       <section data-panel="settings" hidden>

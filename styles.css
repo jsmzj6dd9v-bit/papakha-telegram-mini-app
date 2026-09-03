@@ -986,6 +986,9 @@ button {
   display: none;
 }
 
+.verification-panel h2 { margin-bottom: 20px; }
+.verification-status,.sandbox-warning{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px}.verification-status strong,.sandbox-warning strong{display:block;margin-bottom:4px}.verification-status p,.sandbox-warning p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}.verification-status[data-state="approved"]{border-color:#1b8a53;background:color-mix(in srgb,#1b8a53 9%,var(--paper))}.verification-status[data-state="declined"],.verification-status[data-state="review"]{border-color:var(--red)}.sandbox-warning{border-color:#d49a00;background:color-mix(in srgb,#d49a00 10%,var(--paper))}.verification-consent{display:flex;align-items:flex-start;gap:10px;margin:18px 0;font-size:12px;line-height:1.45}.verification-consent input{margin-top:2px;accent-color:var(--red)}.verification-policy-links{font-size:12px}.verification-policy-links a{color:var(--red)}.sumsub-container:not(:empty){min-height:420px;margin:18px -8px}.verification-buttons{display:grid;gap:8px}.verification-buttons [hidden]{display:none}.verification-buttons button:disabled{cursor:not-allowed;opacity:.45}
+
 .toast {
   position: fixed;
   z-index: 70;

@@ -10,6 +10,11 @@
     "INIT_DATA_MAX_AGE_SECONDS": "300",
     "MINI_APP_URL": "https://jsmzj6dd9v-bit.github.io/papakha-telegram-mini-app/",
     "ADMIN_APP_URL": "https://papakha-admin.jsmzj6dd9v.workers.dev/"
+    ,"KYC_MODE": "sandbox"
+    ,"KYC_ENFORCEMENT": "off"
+    ,"KYC_TEST_TELEGRAM_IDS": "8321831931"
+    ,"SUMSUB_LEVEL_NAME": "papakha-sandbox"
+    ,"SUMSUB_API_BASE_URL": "https://api.sumsub.com"
   },
   "kv_namespaces": [{
     "binding": "RATES_CACHE",
@@ -34,7 +39,12 @@
         "DEV_AUTH_ENABLED": "true",
         "INIT_DATA_MAX_AGE_SECONDS": "300",
         "MINI_APP_URL": "http://127.0.0.1:8080/",
-        "ADMIN_APP_URL": "http://127.0.0.1:8080/admin/"
+        "ADMIN_APP_URL": "http://127.0.0.1:8080/admin/",
+        "KYC_MODE": "sandbox",
+        "KYC_ENFORCEMENT": "owner_only",
+        "KYC_TEST_TELEGRAM_IDS": "8321831931,1001",
+        "SUMSUB_LEVEL_NAME": "papakha-sandbox",
+        "SUMSUB_API_BASE_URL": "https://api.sumsub.com"
       },
       "kv_namespaces": [{ "binding": "RATES_CACHE", "id": "00000000000000000000000000000000" }],
       "d1_databases": [{

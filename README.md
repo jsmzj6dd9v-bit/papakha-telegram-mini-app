@@ -22,6 +22,7 @@ Telegram Mini App с актуальными предварительными к�
 - надёжная очередь Telegram-уведомлений с повторными попытками;
 - нейтральный публичный API без сведений о поставщике котировок;
 - только ручное исполнение сделки: автоматическая отправка активов отключена.
+- подготовленная KYC-интеграция Sumsub Sandbox: документы и биометрия не сохраняются в Papakha, а обязательная проверка по умолчанию выключена.
 
 ## Публичный API
 
@@ -49,3 +50,9 @@ Telegram Mini App с актуальными предварительными к�
 Worker `papakha-rates` подключён к отдельным KV `papakha-rates-cache`, D1 `papakha-deals` и Queue `papakha-notifications`. Реальные идентификаторы ресурсов записаны в production-конфигурации, а секреты находятся только в Cloudflare Workers Secrets. Предыдущие Worker и KV сохранены как аварийный резерв и не удаляются без отдельного подтверждения владельца.
 
 Финальный курс всегда подтверждает менеджер. KZT, AED и USD автоматически не рассчитываются.
+
+## KYC Sandbox
+
+После применения миграции `0003_identity_verifications.sql` задайте `SUMSUB_APP_TOKEN`, `SUMSUB_SECRET_KEY` и `SUMSUB_WEBHOOK_SECRET` как Workers Secrets. В кабинете Sumsub создайте Sandbox-уровень `papakha-sandbox` с документом, selfie/liveness и AML и направьте подписанный `HMAC_SHA256_HEX` webhook на `/api/verification/webhook`.
+
+Первое развёртывание использует `KYC_ENFORCEMENT=off`. Для тестирования только владельцем переключите значение на `owner_only`; список тестовых ID находится в `KYC_TEST_TELEGRAM_IDS`. Значение `all` намеренно блокируется кодом до юридической готовности production-проверки. В Sandbox нельзя загружать реальные документы.

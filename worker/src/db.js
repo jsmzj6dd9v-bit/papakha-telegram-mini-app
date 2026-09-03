@@ -25,7 +25,7 @@ export const enqueueNotification = async (env, outboxId) => {
   }
 };
 
-export const createDeal = async (env, { user, requestId, input, quote, rates }) => {
+export const createDeal = async (env, { user, requestId, input, quote, rates, verification = null }) => {
   const db = requireDatabase(env);
   const existing = await db.prepare(
     "SELECT * FROM deals WHERE telegram_user_id = ? AND client_request_id = ?",
@@ -56,13 +56,15 @@ export const createDeal = async (env, { user, requestId, input, quote, rates }) 
       `INSERT INTO deals
        (id, public_id, telegram_user_id, client_request_id, status, give_currency, give_amount,
         receive_currency, receive_amount, payment_method, quoted_rate, market_rate_snapshot,
-        markup_snapshot, quote_updated_at, quote_stale, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        markup_snapshot, quote_updated_at, quote_stale, verification_id,
+        verification_status_snapshot, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       id, publicId, user.id, requestId, input.giveCurrency, input.amount,
       input.receiveCurrency, quote?.outputAmount || null, input.method,
       quote?.rate || null, jsonValue(rates?.rates || null), jsonValue(markupSnapshot),
-      rates?.updatedAt || null, rates?.stale ? 1 : 0, createdAt, createdAt,
+      rates?.updatedAt || null, rates?.stale ? 1 : 0, verification?.id || null,
+      verification?.status || null, createdAt, createdAt,
     ),
     db.prepare(
       `INSERT INTO deal_events

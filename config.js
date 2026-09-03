@@ -5,4 +5,6 @@ window.PAPAKHA_CONFIG = Object.freeze({
     ? "http://127.0.0.1:8787"
     : "https://papakha-rates.jsmzj6dd9v.workers.dev",
   developmentUserId: isLocalPreview ? 1001 : null,
+  privacyPolicyUrl: null,
+  kycPolicyUrl: null,
 });

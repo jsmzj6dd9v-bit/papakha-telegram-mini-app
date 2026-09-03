@@ -208,6 +208,29 @@
       </nav>
     </div>
 
+    <div id="verification-sheet" class="sheet" aria-hidden="true">
+      <button class="sheet-backdrop" type="button" data-close-verification aria-label="Закрыть"></button>
+      <section class="sheet-panel verification-panel" role="dialog" aria-modal="true" aria-labelledby="verification-title">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <p class="eyebrow">ПРОВЕРКА КЛИЕНТА</p>
+        <h2 id="verification-title">Подтвердите<br />личность.</h2>
+        <div id="verification-status" class="verification-status" data-state="unverified">
+          <strong>Проверка ещё не начата</strong>
+          <p>Она необходима перед отправкой заявки.</p>
+        </div>
+        <div id="sandbox-warning" class="sandbox-warning"><strong>Тестовый режим</strong><p>Не загружайте реальные документы. Сейчас проверяется только работа Sandbox.</p></div>
+        <label id="verification-consent" class="verification-consent"><input id="verification-consent-checkbox" type="checkbox" /><span>Я понимаю, что это тестовая проверка, и не буду использовать реальные персональные данные.</span></label>
+        <p id="verification-policy-links" class="verification-policy-links" hidden><a id="privacy-policy-link" rel="noopener" target="_blank">Политика конфиденциальности</a><span> · </span><a id="kyc-policy-link" rel="noopener" target="_blank">Правила KYC/AML</a></p>
+        <div id="sumsub-websdk-container" class="sumsub-container"></div>
+        <p id="verification-error" class="field-error" role="alert"></p>
+        <div class="verification-buttons">
+          <button id="start-verification" class="primary-button" type="button" disabled>Начать тестовую проверку</button>
+          <button id="submit-verified-deal" class="primary-button" type="button" hidden>Отправить заявку</button>
+          <button class="secondary-button" type="button" data-close-verification>Вернуться к заявке</button>
+        </div>
+      </section>
+    </div>
+
     <div id="request-sheet" class="sheet" aria-hidden="true">
       <button class="sheet-backdrop" type="button" data-close-sheet aria-label="Закрыть"></button>
       <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">

@@ -37,6 +37,13 @@
   const quoteState = document.getElementById("quote-state");
   const quoteValue = document.getElementById("quote-value");
   const quoteRate = document.getElementById("quote-rate");
+  const verificationSheet = document.getElementById("verification-sheet");
+  const verificationStatus = document.getElementById("verification-status");
+  const verificationError = document.getElementById("verification-error");
+  const verificationConsent = document.getElementById("verification-consent-checkbox");
+  const startVerificationButton = document.getElementById("start-verification");
+  const submitVerifiedDealButton = document.getElementById("submit-verified-deal");
+  const sumsubContainer = document.getElementById("sumsub-websdk-container");
   let currentDraft = null;
   let currentDeal = null;
   let dealPollTimer = null;
@@ -45,6 +52,8 @@
   let currentSurveyStep = 0;
   let toastTimer = null;
   let ratesRequest = null;
+  let pendingDeal = null;
+  let verificationPollTimer = null;
 
   const surveyHeadings = [
     "Что<br /><em>отдаёте?</em>",
@@ -295,8 +304,120 @@
       headers: { Accept: "application/json", ...(options.body ? { "Content-Type": "application/json" } : {}), ...authHeaders(), ...(options.headers || {}) },
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw new Error(payload?.error?.message || "Не удалось выполнить запрос");
+    if (!response.ok || !payload?.ok) {
+      const error = new Error(payload?.error?.message || "Не удалось выполнить запрос");
+      error.code = payload?.error?.code || "REQUEST_FAILED";
+      throw error;
+    }
     return payload;
+  };
+
+  const verificationText = Object.freeze({
+    unverified:["Проверка ещё не начата","Она необходима перед отправкой заявки."],
+    pending:["Проверяем данные","Результат появится после защищённого уведомления сервера."],
+    review:["Требуется решение специалиста","Владелец рассмотрит технический статус проверки."],
+    retry:["Проверку нужно продолжить","Откройте форму ещё раз и выполните подсказки."],
+    approved:["Проверка пройдена","Теперь подтвердите отправку заявки."],
+    declined:["Проверка не пройдена","Создание сделки для этой проверки заблокировано."],
+    expired:["Нужна повторная проверка","Срок действия документа или проверки истёк."],
+    error:["Проверка временно недоступна","Попробуйте ещё раз немного позже."],
+  });
+
+  const renderVerification = (verification) => {
+    const status = verification?.status || "unverified";
+    const [title, message] = verificationText[status] || verificationText.error;
+    verificationStatus.dataset.state = status;
+    verificationStatus.innerHTML = `<strong>${title}</strong><p>${message}</p>`;
+    const approved = status === "approved" && verification?.canCreateDeal;
+    submitVerifiedDealButton.hidden = !approved;
+    startVerificationButton.hidden = !["unverified","retry","expired","error"].includes(status);
+    verificationConsent.closest("label").hidden = startVerificationButton.hidden;
+    if (!startVerificationButton.hidden) startVerificationButton.disabled = !verificationConsent.checked;
+  };
+
+  const openVerificationSheet = (verification) => {
+    renderVerification(verification);
+    verificationError.textContent = "";
+    verificationSheet.classList.add("is-open");
+    verificationSheet.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    if (verification?.status === "pending") pollVerification();
+  };
+
+  const closeVerificationSheet = () => {
+    window.clearTimeout(verificationPollTimer);
+    verificationSheet.classList.remove("is-open");
+    verificationSheet.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+
+  const pollVerification = async (attempt = 0) => {
+    try {
+      const result = (await apiRequest("/api/verification/status")).verification;
+      renderVerification(result);
+      if (["approved","review","retry","declined","expired"].includes(result.status) || attempt >= 39) return;
+    } catch { if (attempt >= 39) return; }
+    window.clearTimeout(verificationPollTimer);
+    verificationPollTimer = window.setTimeout(() => pollVerification(attempt + 1), 3000);
+  };
+
+  const loadSumsubSdk = async () => {
+    if (window.snsWebSdk) return;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://static.sumsub.com/idensic/static/sns-websdk-builder.js";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Не удалось загрузить защищённую форму проверки"));
+      document.head.appendChild(script);
+    });
+  };
+
+  const getVerificationSession = async () => (await apiRequest("/api/verification/session", { method:"POST", body:"{}" })).session;
+
+  const startVerification = async () => {
+    startVerificationButton.disabled = true;
+    verificationError.textContent = "";
+    try {
+      const [session] = await Promise.all([getVerificationSession(), loadSumsubSdk()]);
+      sumsubContainer.innerHTML = "";
+      const permissionObserver = new MutationObserver(() => {
+        const iframe = sumsubContainer.querySelector("iframe");
+        if (iframe) { iframe.setAttribute("allow", "camera; microphone"); permissionObserver.disconnect(); }
+      });
+      permissionObserver.observe(sumsubContainer, { childList:true, subtree:true });
+      window.snsWebSdk.init(session.token, async () => (await getVerificationSession()).token)
+        .withConf({ lang:"ru", theme:document.body.classList.contains("theme-dark")?"dark":"light" })
+        .withOptions({ addViewportTag:false, adaptIframeHeight:true })
+        .on("idCheck.onStepCompleted", () => pollVerification())
+        .on("idCheck.onError", () => { verificationError.textContent = "Проверка временно недоступна"; })
+        .onMessage((type) => { if (/review|status|complete/i.test(String(type))) pollVerification(); })
+        .build().launch("#sumsub-websdk-container");
+      renderVerification({ status:"pending", canCreateDeal:false });
+      pollVerification();
+    } catch (error) {
+      verificationError.textContent = error.message || "Не удалось начать проверку";
+      startVerificationButton.disabled = !verificationConsent.checked;
+    }
+  };
+
+  const sendPendingDeal = async () => {
+    if (!pendingDeal) return;
+    submitVerifiedDealButton.disabled = true;
+    surveyNext.disabled = true;
+    try {
+      const payload = await apiRequest("/api/deals", { method:"POST", headers:{"Idempotency-Key":pendingDeal.requestId}, body:JSON.stringify(pendingDeal.body) });
+      currentDeal = payload.deal;
+      try { window.localStorage.setItem("papakhaExchangeDraft", JSON.stringify(pendingDeal.draft)); } catch {}
+      closeVerificationSheet();
+      openSheet({ ...pendingDeal.draft, dealPublicId:payload.deal.publicId });
+      pollDeal();
+    } catch (error) {
+      verificationError.textContent = error.message || "Не удалось отправить заявку";
+    } finally {
+      submitVerifiedDealButton.disabled = false;
+      surveyNext.disabled = false;
+      surveyNext.firstChild.textContent = "Создать заявку\n";
+    }
   };
 
   const openAdminPanel = async () => {
@@ -413,18 +534,17 @@
       // The app remains fully usable when device storage is unavailable.
     }
 
+    const requestFingerprint = JSON.stringify([draft.amount,draft.giveCurrency,draft.receiveCurrency,draft.method]);
+    const savedRequestId = (() => { try { const saved=JSON.parse(window.localStorage.getItem("papakhaExchangeDraft"));return saved?.requestFingerprint===requestFingerprint?saved.requestId:null; } catch { return null; } })();
+    const requestId = savedRequestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    pendingDeal = { requestId, draft:{...draft,requestId,requestFingerprint}, body:{ amount: amountInput.value.trim().replace(/\s/g, "").replace(",", "."), giveCurrency:draft.giveCurrency, receiveCurrency:draft.receiveCurrency, method:draft.method } };
+    try { window.localStorage.setItem("papakhaExchangeDraft", JSON.stringify(pendingDeal.draft)); } catch {}
     surveyNext.disabled = true;
-    surveyNext.firstChild.textContent = "Отправляем\n";
+    surveyNext.firstChild.textContent = "Проверяем\n";
     try {
-      const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      const payload = await apiRequest("/api/deals", {
-        method: "POST",
-        headers: { "Idempotency-Key": requestId },
-        body: JSON.stringify({ amount: amountInput.value.trim().replace(/\s/g, "").replace(",", "."), giveCurrency: draft.giveCurrency, receiveCurrency: draft.receiveCurrency, method: draft.method }),
-      });
-      currentDeal = payload.deal;
-      openSheet({ ...draft, dealPublicId: payload.deal.publicId });
-      pollDeal();
+      const verification = (await apiRequest("/api/verification/status")).verification;
+      if (verification.required) openVerificationSheet(verification);
+      else await sendPendingDeal();
     } catch (error) {
       surveyError.textContent = error.message || "Не удалось отправить заявку. Попробуйте ещё раз.";
       telegram?.HapticFeedback?.notificationOccurred("error");
@@ -466,6 +586,11 @@
   document.querySelectorAll("[data-close-sheet]").forEach((button) => {
     button.addEventListener("click", closeSheet);
   });
+
+  document.querySelectorAll("[data-close-verification]").forEach((button) => button.addEventListener("click", closeVerificationSheet));
+  verificationConsent.addEventListener("change", () => { startVerificationButton.disabled = !verificationConsent.checked; });
+  startVerificationButton.addEventListener("click", startVerification);
+  submitVerifiedDealButton.addEventListener("click", sendPendingDeal);
 
   copyButton.addEventListener("click", async () => {
     if (!currentDraft) return;
@@ -514,6 +639,14 @@
   const previewTheme = new URLSearchParams(window.location.search).get("theme");
   if (["localhost", "127.0.0.1"].includes(window.location.hostname) && previewTheme === "dark") {
     document.body.classList.add("theme-dark");
+  }
+
+  const privacyUrl = window.PAPAKHA_CONFIG?.privacyPolicyUrl;
+  const kycPolicyUrl = window.PAPAKHA_CONFIG?.kycPolicyUrl;
+  if (privacyUrl && kycPolicyUrl) {
+    document.getElementById("privacy-policy-link").href = privacyUrl;
+    document.getElementById("kyc-policy-link").href = kycPolicyUrl;
+    document.getElementById("verification-policy-links").hidden = false;
   }
 
   setSurveyStep(0);
