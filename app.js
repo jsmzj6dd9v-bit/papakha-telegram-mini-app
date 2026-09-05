@@ -53,6 +53,9 @@
   let toastTimer = null;
   let ratesRequest = null;
   let pendingDeal = null;
+  let questionnaire=null;
+  let questionnaireDefinition=null;
+  let questionnaireReady=false;
   let verificationPollTimer = null;
 
   const surveyHeadings = [
@@ -194,7 +197,8 @@
     currentSurveyStep = Math.max(0, Math.min(step, surveySteps.length - 1));
     surveySteps.forEach((item, index) => item.classList.toggle("is-active", index === currentSurveyStep));
     surveyCounter.textContent = `ШАГ ${currentSurveyStep + 1} ИЗ ${surveySteps.length}`;
-    surveyTitle.innerHTML = surveyHeadings[currentSurveyStep];
+    if(questionnaire)surveyTitle.textContent=questionnaire.title(surveySteps[currentSurveyStep].dataset.questionId);
+    else surveyTitle.innerHTML = surveyHeadings[currentSurveyStep];
     surveyProgressBar.style.width = `${((currentSurveyStep + 1) / surveySteps.length) * 100}%`;
     surveyBack.hidden = currentSurveyStep === 0;
     surveyNext.firstChild.textContent = currentSurveyStep === surveySteps.length - 1 ? "Создать заявку\n" : "Продолжить\n";
@@ -205,7 +209,7 @@
     updateQuote();
     window.scrollTo({ top: 0, behavior: "smooth" });
     tap();
-    if (currentSurveyStep === 1) window.setTimeout(() => amountInput.focus(), 260);
+    if (Number(surveySteps[currentSurveyStep]?.dataset.surveyStep) === 1) window.setTimeout(() => amountInput.focus(), 260);
   };
 
   const parseAmount = (value) => {
@@ -251,6 +255,7 @@
     `Отдаю: ${draft.amount} ${draft.giveCurrency}`,
     `Получаю: ${draft.receiveAmount ? `${draft.receiveAmount} ` : ""}${draft.receiveCurrency}`,
     `Способ расчёта: ${draft.method}`,
+    ...(draft.answers||[]).map(a=>`${a.label}: ${Array.isArray(a.answer)?a.answer.join(', '):a.answer}`),
     `Предварительный курс: ${draft.rateLabel || "после подтверждения"}`,
     draft.dealPublicId ? `Номер: ${draft.dealPublicId}` : null,
     draft.rateUpdatedAt ? `Обновлено в ${draft.rateUpdatedAt}${draft.rateStale ? " (курс устарел)" : ""}` : null,
@@ -497,19 +502,22 @@
   });
 
   const validateCurrentStep = () => {
-    if (currentSurveyStep === 0 && !selectedValue("giveCurrency")) return "Выберите валюту";
-    if (currentSurveyStep === 1 && !parseAmount(amountInput.value)) {
+    const step=Number(surveySteps[currentSurveyStep].dataset.surveyStep);
+    if(questionnaire){const error=questionnaire.validate(surveySteps[currentSurveyStep].dataset.questionId);if(error)return error;}
+    if (step === 0 && !selectedValue("giveCurrency")) return "Выберите валюту";
+    if (step === 1 && !parseAmount(amountInput.value)) {
       amountError.textContent = "Введите сумму больше нуля";
       amountInput.setAttribute("aria-invalid", "true");
       amountInput.focus();
       return "";
     }
-    if (currentSurveyStep === 2 && !selectedValue("receiveCurrency")) return "Выберите валюту получения";
-    if (currentSurveyStep === 3 && !selectedValue("method")) return "Выберите способ расчёта";
+    if (step === 2 && !selectedValue("receiveCurrency")) return "Выберите валюту получения";
+    if (step === 3 && !selectedValue("method")) return "Выберите способ расчёта";
     return null;
   };
 
   const finishSurvey = async () => {
+    if(!questionnaireReady){surveyError.textContent='Анкета ещё не загружена. Откройте приложение заново при стабильном соединении.';return;}
     updateQuote();
     const receiveAmount = currentQuote
       ? rateCore.formatNumber(currentQuote.outputAmount, currentQuote.outputDecimals)
@@ -522,22 +530,17 @@
       giveCurrency: selectedValue("giveCurrency"),
       receiveCurrency: selectedValue("receiveCurrency"),
       method: selectedValue("method"),
+      answers:questionnaire?.snapshot()||[],
       receiveAmount,
       rateLabel,
       rateUpdatedAt: currentQuote ? formatTimestamp(currentQuote.updatedAt) : null,
       rateStale: Boolean(currentQuote?.stale),
     };
 
-    try {
-      window.localStorage.setItem("papakhaExchangeDraft", JSON.stringify(draft));
-    } catch {
-      // The app remains fully usable when device storage is unavailable.
-    }
-
-    const requestFingerprint = JSON.stringify([draft.amount,draft.giveCurrency,draft.receiveCurrency,draft.method]);
+    const requestFingerprint = JSON.stringify([draft.amount,draft.giveCurrency,draft.receiveCurrency,draft.method,draft.answers,questionnaireDefinition?.sessionId]);
     const savedRequestId = (() => { try { const saved=JSON.parse(window.localStorage.getItem("papakhaExchangeDraft"));return saved?.requestFingerprint===requestFingerprint?saved.requestId:null; } catch { return null; } })();
     const requestId = savedRequestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    pendingDeal = { requestId, draft:{...draft,requestId,requestFingerprint}, body:{ amount: amountInput.value.trim().replace(/\s/g, "").replace(",", "."), giveCurrency:draft.giveCurrency, receiveCurrency:draft.receiveCurrency, method:draft.method } };
+    pendingDeal = { requestId, draft:{...draft,requestId,requestFingerprint}, body:{ amount: amountInput.value.trim().replace(/\s/g, "").replace(",", "."), giveCurrency:draft.giveCurrency, receiveCurrency:draft.receiveCurrency, method:draft.method,questionnaireSession:questionnaireDefinition?.sessionId,answers:questionnaire?.answers()||{} } };
     try { window.localStorage.setItem("papakhaExchangeDraft", JSON.stringify(pendingDeal.draft)); } catch {}
     surveyNext.disabled = true;
     surveyNext.firstChild.textContent = "Проверяем\n";
@@ -573,11 +576,6 @@
       if (input.name === "giveCurrency") updateReceiveChoices();
       updateQuote();
       tap("medium");
-      window.setTimeout(() => {
-        if (currentSurveyStep !== 1 && currentSurveyStep < surveySteps.length - 1) {
-          setSurveyStep(currentSurveyStep + 1);
-        }
-      }, 160);
     });
   });
 
@@ -652,6 +650,12 @@
   setSurveyStep(0);
   initTelegram();
   loadRates();
+  apiRequest('/api/questionnaire/session',{method:'POST',body:'{}'}).then(({form:definition})=>{
+    questionnaireDefinition=definition;
+    const sync=controller=>{const active=surveySteps[currentSurveyStep];surveySteps.splice(0,surveySteps.length,...controller.steps());setSurveyStep(Math.max(0,surveySteps.indexOf(active)));};
+    questionnaire=window.PapakhaQuestionnaire.mount({form,definition,baseSteps:[...surveySteps],onChange:sync});
+    sync(questionnaire);questionnaireReady=true;
+  }).catch(()=>{surveyError.textContent='Не удалось загрузить анкету. Для отправки заявки откройте приложение заново.';});
   const launchParam = telegram?.initDataUnsafe?.start_param
     || new URLSearchParams(window.location.search).get("tgWebAppStartParam")
     || new URLSearchParams(window.location.search).get("startapp");

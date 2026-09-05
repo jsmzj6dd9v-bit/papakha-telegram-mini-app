@@ -26,7 +26,7 @@ jobs:
       - name: Prepare public Mini App
         run: |
           mkdir _site
-          cp index.html styles.css app.js config.js rates-core.js _site/
+          cp index.html styles.css app.js config.js rates-core.js questionnaire-ui.js _site/
           cp -R assets _site/assets
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3

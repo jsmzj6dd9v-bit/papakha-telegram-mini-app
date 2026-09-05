@@ -1,4 +1,6 @@
 import { ApiError, assert } from "./errors.js";
+import { availableActions } from "./admin-workflow.js";
+import {getForm,saveForm,startForm,submissionForm} from './questionnaire.js';
 import { authenticateTelegram } from "./auth.js";
 import { calculateServerQuote, parseDecimal } from "./money.js";
 import { getCurrentRates } from "./rates.js";
@@ -105,6 +107,11 @@ const route = async (request, env) => {
 
   if (path.startsWith("/api/admin/")) {
     const admin = await authenticateAdminSession(request, env, { requireCsrf: !["GET", "HEAD"].includes(method) });
+    if(path==='/api/admin/questionnaire'){
+      requireRole(admin,['owner']);
+      if(method==='GET')return json({ok:true,form:await getForm(env)});
+      if(method==='POST'){const body=await parseJson(request);return json({ok:true,form:await saveForm(env,admin,body,body.publish===true)});}
+    }
     if (method === "GET" && path === "/api/admin/dashboard") {
       const dashboard = await getDashboard(env);
       let ratesState = "unavailable";
@@ -115,7 +122,8 @@ const route = async (request, env) => {
         verification: env.KYC_MODE === "sandbox" && env.SUMSUB_APP_TOKEN && env.SUMSUB_SECRET_KEY && env.SUMSUB_WEBHOOK_SECRET ? "sandbox" : "unavailable",
       } } });
     }
-    if (method === "GET" && path === "/api/admin/deals") return json({ ok: true, deals: await listAdminDeals(env, { status: url.searchParams.get("status"), search: url.searchParams.get("search"), limit: url.searchParams.get("limit") }) });
+    if (method === "GET" && path === "/api/admin/deals") return json({ ok: true, deals: await listAdminDeals(env, { view: url.searchParams.get("view"), adminId: admin.telegram_id, offset: url.searchParams.get("offset"), status: url.searchParams.get("status"), search: url.searchParams.get("search"), limit: url.searchParams.get("limit") }) });
+    if (method === "GET" && path === "/api/admin/team") return json({ok: true, team: (await listAdmins(env)).filter(a => a.active && !a.revoked_at && ["owner","manager"].includes(a.role)).map(a => ({telegramId: a.telegram_id, displayName: a.display_name}))});
     if (method === "GET" && path === "/api/admin/settings") { requireRole(admin, ["owner", "manager", "viewer"]); return json({ ok: true, settings: await getSettings(env) }); }
     if (method === "PATCH" && path === "/api/admin/settings") { requireRole(admin, ["owner"]); return json({ ok: true, settings: await patchSettings(env, admin, await parseJson(request)) }); }
     if (method === "GET" && path === "/api/admin/audit-log") { requireRole(admin, ["owner"]); return json({ ok: true, events: await getAuditLog(env, url.searchParams.get("limit")) }); }
@@ -134,7 +142,7 @@ const route = async (request, env) => {
     const match = path.match(/^\/api\/admin\/deals\/([^/]+)(?:\/([^/]+))?$/);
     if (match) {
       const deal = await getAdminDeal(env, decodeURIComponent(match[1]));
-      if (method === "GET" && !match[2]) return json({ ok: true, deal });
+      if (method === "GET" && !match[2]) return json({ ok: true, deal: {...deal, availableActions: availableActions(deal, admin)} });
       if (method === "POST" && match[2]) {
         requireRole(admin, ["owner", "manager"]);
         const updated = await transitionAdminDeal(env, { deal, admin, action: match[2], input: await parseJson(request), idempotencyKey: request.headers.get("Idempotency-Key") });
@@ -143,10 +151,19 @@ const route = async (request, env) => {
     }
   }
 
+  if(method==='POST'&&path==='/api/questionnaire/session'){
+    const user=await authenticateTelegram(request,env);
+    await enforceRateLimit(env,request,'questionnaire-session',{limit:20,windowSeconds:600,identity:user.id});
+    return json({ok:true,form:await startForm(env,user)});
+  }
   if (method === "POST" && path === "/api/deals") {
     const user = await authenticateTelegram(request, env);
     await enforceRateLimit(env, request, "deal-create", { limit: 10, windowSeconds: 60, identity: user.id });
     const input = await parseJson(request);
+    const existingRequest=request.headers.get('Idempotency-Key');
+    if(existingRequest){const previous=await env.DB.prepare('SELECT * FROM deals WHERE telegram_user_id=? AND client_request_id=?').bind(user.id,existingRequest).first();if(previous)return json({ok:true,created:false,deal:publicDeal(previous)});}
+    input.questionnaireSnapshot=await submissionForm(env,user,input);
+    input.answers=Object.fromEntries((input.questionnaireSnapshot?.answers||[]).map(a=>[a.id,a.answer]));
     assert(input?.giveCurrency && input?.receiveCurrency && input?.amount && input?.method, 400, "DEAL_INPUT_INVALID", "Заполните все данные сделки");
     const settings = await getSettings(env);
     assert(!settings.maintenance_mode, 503, "MAINTENANCE_MODE", "Создание заявок временно приостановлено");

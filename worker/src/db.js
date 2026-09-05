@@ -1,6 +1,7 @@
 import { ApiError, assert } from "./errors.js";
 import { randomToken, sha256 } from "./auth.js";
 import { parseDecimal } from "./money.js";
+import { availableActions } from "./admin-workflow.js";
 
 const nowIso = () => new Date().toISOString();
 const eventId = () => crypto.randomUUID();
@@ -57,14 +58,14 @@ export const createDeal = async (env, { user, requestId, input, quote, rates, ve
        (id, public_id, telegram_user_id, client_request_id, status, give_currency, give_amount,
         receive_currency, receive_amount, payment_method, quoted_rate, market_rate_snapshot,
         markup_snapshot, quote_updated_at, quote_stale, verification_id,
-        verification_status_snapshot, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        verification_status_snapshot, created_at, updated_at, questionnaire_snapshot)
+       VALUES (?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       id, publicId, user.id, requestId, input.giveCurrency, input.amount,
       input.receiveCurrency, quote?.outputAmount || null, input.method,
       quote?.rate || null, jsonValue(rates?.rates || null), jsonValue(markupSnapshot),
       rates?.updatedAt || null, rates?.stale ? 1 : 0, verification?.id || null,
-      verification?.status || null, createdAt, createdAt,
+      verification?.status || null, createdAt, createdAt, jsonValue(input.questionnaireSnapshot||null),
     ),
     db.prepare(
       `INSERT INTO deal_events
@@ -176,6 +177,13 @@ export const listAdminDeals = async (env, filters = {}) => {
   const db = requireDatabase(env);
   const clauses = [];
   const bindings = [];
+  const active = "d.status NOT IN ('completed','cancelled')";
+  if (filters.view === "new") clauses.push("d.status = 'new' AND d.assigned_admin_id IS NULL");
+  if (filters.view === "mine") { clauses.push(`${active} AND d.assigned_admin_id = ?`); bindings.push(filters.adminId); }
+  if (filters.view === "attention") { clauses.push(`${active} AND (d.assigned_admin_id = ? OR d.assigned_admin_id IS NULL) AND d.status IN ('new','reviewing','payment_review','exchange_in_progress','dispute')`); bindings.push(filters.adminId); }
+  if (filters.view === "waiting") clauses.push("d.status IN ('rate_offered','rate_accepted','awaiting_payment')");
+  if (filters.view === "active") clauses.push(active);
+  if (filters.view === "archive") clauses.push("d.status IN ('completed','cancelled')");
   if (filters.status) {
     clauses.push("d.status = ?");
     bindings.push(filters.status);
@@ -193,8 +201,8 @@ export const listAdminDeals = async (env, filters = {}) => {
      JOIN telegram_users u ON u.telegram_id = d.telegram_user_id
      LEFT JOIN admins a ON a.telegram_id = d.assigned_admin_id
      ${where}
-     ORDER BY d.created_at DESC LIMIT ?`,
-  ).bind(...bindings, limit).all();
+     ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?`,
+  ).bind(...bindings, limit, Math.max(0, Math.floor(Number(filters.offset) || 0))).all();
   return result.results || [];
 };
 
@@ -217,7 +225,7 @@ export const getAdminDeal = async (env, id) => {
     db.prepare("SELECT * FROM notification_outbox WHERE deal_id = ? ORDER BY created_at DESC").bind(deal.id).all(),
     db.prepare("SELECT * FROM execution_attempts WHERE deal_id = ? ORDER BY created_at DESC").bind(deal.id).all(),
   ]);
-  return { ...deal, events: events.results || [], notifications: notifications.results || [], executions: executions.results || [] };
+  return { ...deal, revision: (events.results || []).length, events: events.results || [], notifications: notifications.results || [], executions: executions.results || [] };
 };
 
 export const createAdminSession = async (env, telegramUser) => {
@@ -355,12 +363,43 @@ const notificationText = (action, deal) => ({
 export const transitionAdminDeal = async (env, { deal, admin, action, input = {}, idempotencyKey }) => {
   const db = requireDatabase(env);
   const now = nowIso();
+  const operationId = `${admin.telegram_id}:${idempotencyKey || eventId()}`;
+  const previousOperation = await db.prepare("SELECT deal_id, action FROM admin_operations WHERE id = ?").bind(operationId).first();
+  if (previousOperation) {
+    assert(previousOperation.deal_id === deal.id && previousOperation.action === action, 409, "OPERATION_CONFLICT", "Ключ операции уже использован");
+    return getAdminDeal(env, deal.id);
+  }
+  assert(availableActions(deal, admin).includes(action), 409, "ACTION_UNAVAILABLE", "Действие недоступно. Обновите карточку и проверьте ответственного");
+  if (input.expectedUpdatedAt) assert(input.expectedUpdatedAt === deal.updated_at, 409, "DEAL_CONCURRENTLY_UPDATED", "Сделка изменилась. Обновите карточку");
+  if (input.expectedRevision !== undefined) assert(input.expectedRevision === deal.revision, 409, "DEAL_CONCURRENTLY_UPDATED", "Сделка изменилась. Обновите карточку");
+  const runBatch = async (statements) => {
+    const guard = db.prepare(`INSERT INTO admin_operations (id, deal_id, actor_id, action, valid)
+      VALUES (?, ?, ?, ?, CASE WHEN EXISTS (SELECT 1 FROM deals WHERE id = ? AND updated_at = ? AND status = ? AND assigned_admin_id IS ? AND payment_confirmed_at IS ?)
+      AND (SELECT COUNT(*) FROM deal_events WHERE deal_id = ?) = ? THEN 1 ELSE 0 END)`)
+      .bind(operationId, deal.id, admin.telegram_id, action, deal.id, deal.updated_at, deal.status, deal.assigned_admin_id, deal.payment_confirmed_at, deal.id, deal.revision);
+    try { return (await db.batch([guard, ...statements])).slice(1); }
+    catch (error) {
+      if (/constraint/i.test(String(error))) throw new ApiError(409, "DEAL_CONCURRENTLY_UPDATED", "Сделка уже изменена. Обновите карточку");
+      throw error;
+    }
+  };
+  if (action === "transfer") {
+    const reason = String(input.reason || "").trim();
+    assert(reason.length >= 3 && reason.length <= 500, 400, "REASON_REQUIRED", "Укажите причину передачи (3–500 символов)");
+    const target = await db.prepare("SELECT telegram_id FROM admins WHERE telegram_id = ? AND active = 1 AND revoked_at IS NULL AND role IN ('owner','manager')").bind(Number(input.adminId) || 0).first();
+    assert(target, 400, "ADMIN_INVALID", "Выберите активного менеджера");
+    await runBatch([
+      db.prepare("UPDATE deals SET assigned_admin_id = ?, updated_at = ? WHERE id = ?").bind(target.telegram_id, now, deal.id),
+      addDealEvent(db, {dealId: deal.id, actorType: "admin", actorId: admin.telegram_id, eventType: "manager_transferred", fromStatus: deal.status, toStatus: deal.status, payload: {from: deal.assigned_admin_id, to: target.telegram_id, reason}}),
+    ]);
+    return getAdminDeal(env, deal.id);
+  }
 
   if (action === "message") {
     const message = String(input.message || "").trim().slice(0, 2000);
     assert(message, 400, "MESSAGE_EMPTY", "Введите сообщение клиенту");
     const outboxId = eventId();
-    await db.batch([
+    await runBatch([
       db.prepare(`INSERT INTO notification_outbox (id, deal_id, telegram_user_id, event_type, message, created_at)
         VALUES (?, ?, ?, 'manager_message', ?, ?)`)
         .bind(outboxId, deal.id, deal.telegram_user_id, message, now),
@@ -373,6 +412,7 @@ export const transitionAdminDeal = async (env, { deal, admin, action, input = {}
   if (action === "offer-rate") {
     assert(["new", "reviewing", "rate_offered"].includes(deal.status), 409, "INVALID_DEAL_STATUS", "Для этой сделки нельзя предложить курс");
     assert(input.rate && input.receiveAmount, 400, "RATE_OFFER_INVALID", "Укажите курс и сумму получения");
+    parseDecimal(input.rate); parseDecimal(input.receiveAmount);
     const minutes = Math.min(Math.max(Number(input.lockMinutes) || 10, 1), 60);
     const expiresAt = new Date(Date.now() + minutes * 60000).toISOString();
     const outboxId = eventId();
@@ -395,7 +435,7 @@ export const transitionAdminDeal = async (env, { deal, admin, action, input = {}
         VALUES (?, ?, ?, ?, ?)`)
         .bind(eventId(), deal.id, String(input.paymentInstructions).slice(0, 2000), admin.telegram_id, now));
     }
-    const result = await db.batch(statements);
+    const result = await runBatch(statements);
     if (!result[0]?.meta?.changes) throw new ApiError(409, "DEAL_CONCURRENTLY_UPDATED", "Статус сделки уже изменён");
     await enqueueNotification(env, outboxId);
     return getAdminDeal(env, deal.id);
@@ -409,7 +449,7 @@ export const transitionAdminDeal = async (env, { deal, admin, action, input = {}
     const existing = await db.prepare("SELECT * FROM execution_attempts WHERE deal_id = ? AND idempotency_key = ?").bind(deal.id, idempotencyKey).first();
     if (existing) return getAdminDeal(env, deal.id);
     const outboxId = eventId();
-    const result = await db.batch([
+    const result = await runBatch([
       db.prepare("UPDATE deals SET status = 'exchange_in_progress', assigned_admin_id = COALESCE(assigned_admin_id, ?), updated_at = ? WHERE id = ? AND status = ?")
         .bind(admin.telegram_id, now, deal.id, deal.status),
       db.prepare(`INSERT INTO execution_attempts (id, deal_id, idempotency_key, mode, status, created_by, created_at)
@@ -430,7 +470,7 @@ export const transitionAdminDeal = async (env, { deal, admin, action, input = {}
   assert(transition.from.includes(deal.status), 409, "INVALID_DEAL_STATUS", "Действие недоступно для текущего статуса");
   const fields = ["status = ?", "updated_at = ?"];
   const values = [transition.to, now];
-  if (action === "assign") { fields.push("assigned_admin_id = ?"); values.push(Number(input.adminId || admin.telegram_id)); }
+  if (action === "assign") { fields.push("assigned_admin_id = ?"); values.push(admin.telegram_id); }
   if (action === "payment-confirmed") { fields.push("payment_confirmed_at = ?"); values.push(now); }
   if (action === "complete") { fields.push("completed_at = ?"); values.push(now); }
   if (action === "cancel") { fields.push("cancelled_at = ?"); values.push(now); }
@@ -443,7 +483,7 @@ export const transitionAdminDeal = async (env, { deal, admin, action, input = {}
       .bind(outboxId, deal.id, deal.telegram_user_id, transition.event, notificationText(action, deal), now),
   ];
   if (action === "complete") statements.push(db.prepare("UPDATE execution_attempts SET status = 'completed', completed_at = ? WHERE deal_id = ? AND status = 'started'").bind(now, deal.id));
-  const result = await db.batch(statements);
+  const result = await runBatch(statements);
   if (!result[0]?.meta?.changes) throw new ApiError(409, "DEAL_CONCURRENTLY_UPDATED", "Статус сделки уже изменён");
   await enqueueNotification(env, outboxId);
   return getAdminDeal(env, deal.id);
